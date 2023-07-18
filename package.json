@@ -1,0 +1,72 @@
+{
+  "name": "@last9/openapm",
+  "description": "OpenAPM for Node.js",
+  "version": "0.1.0",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "scripts": {
+    "build": "rollup -c",
+    "test": "vitest"
+  },
+  "license": "Apache-2.0",
+  "author": "Last9 team <hi@last9.io>",
+  "contributors": [
+    "Tushar Choudhari <tushar@last9.io> (https://github.com/chtushar)",
+    "Aniket Rao <aniket@last9.io> (https://github.com/anik3tra0)"
+  ],
+  "peerDependencies": {
+    "express": "4.x"
+  },
+  "keywords": [
+    "last9",
+    "metrics",
+    "apm",
+    "prometheus"
+  ],
+  "devDependencies": {
+    "@babel/core": "^7.22.5",
+    "@babel/preset-env": "^7.22.5",
+    "@rollup/plugin-babel": "^6.0.3",
+    "@rollup/plugin-commonjs": "^25.0.2",
+    "@rollup/plugin-json": "^6.0.0",
+    "@rollup/plugin-node-resolve": "^15.1.0",
+    "@rollup/plugin-typescript": "^11.1.2",
+    "@types/express": "^4.17.17",
+    "@types/response-time": "^2.3.5",
+    "@typescript-eslint/eslint-plugin": "^5.61.0",
+    "@typescript-eslint/parser": "^5.61.0",
+    "axios": "^1.4.0",
+    "eslint": "^8.44.0",
+    "eslint-config-semistandard": "^17.0.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-n": "^15.7.0",
+    "eslint-plugin-promise": "^6.1.1",
+    "node-fetch": "^3.3.1",
+    "parse-prometheus-text-format": "^1.1.1",
+    "prettier": "2.8.8",
+    "rollup": "^3.26.0",
+    "supertest": "^6.3.3",
+    "ts-node": "^10.9.1",
+    "tslib": "^2.6.0",
+    "typescript": "^5.1.6",
+    "vitest": "^0.32.4"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "prom-client": "^14.2.0",
+    "response-time": "^2.3.2",
+    "url-value-parser": "^2.2.0"
+  },
+  "directories": {
+    "test": "tests"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/last9/nodejs-openapm.git"
+  },
+  "bugs": {
+    "url": "https://github.com/last9/nodejs-openapm/issues"
+  },
+  "homepage": "https://github.com/last9/nodejs-openapm#readme"
+}
