@@ -14,14 +14,14 @@ describe('REDMiddleware', () => {
   let parsedData: Array<Record<string, any>> = [];
 
   beforeAll(async () => {
-    openapm = new OpenAPM();
     app = express();
+    openapm = new OpenAPM();
     app.use(openapm.REDMiddleware);
 
     addRoutes(app);
     app.listen(3002);
 
-    await sendTestRequests(app, NUMBER_OF_REQUESTS);
+    const out = await sendTestRequests(app, NUMBER_OF_REQUESTS);
     const res = await request(openapm.metricsServer).get('/metrics');
     parsedData = parsePrometheusTextFormat(res.text);
   });
@@ -32,13 +32,22 @@ describe('REDMiddleware', () => {
     });
   });
 
-  test('Captures Counter Metrics', async () => {
+  test('Captures Counter Metrics - App', async () => {
     expect(
       parseInt(
         parsedData?.find((m) => m.name === 'http_requests_total')?.metrics[0]
           .value ?? '0'
       )
     ).toBe(NUMBER_OF_REQUESTS);
+  });
+
+  test('Captures Counter Metrics - Router', async () => {
+    expect(
+      parseInt(
+        parsedData?.find((m) => m.name === 'http_requests_total')?.metrics[1]
+          .value ?? '0'
+      )
+    ).toBe(1);
   });
 
   test('Captures Histogram Metrics', async () => {
@@ -51,10 +60,17 @@ describe('REDMiddleware', () => {
     ).toBe(true);
   });
 
-  test('Masks the path', async () => {
+  test('Masks the path - App', async () => {
     expect(
       parsedData?.find((m) => m.name === 'http_requests_total')?.metrics[0]
         .labels.path
     ).toBe('/api/:id');
+  });
+
+  test('Masks the path - Router', async () => {
+    expect(
+      parsedData?.find((m) => m.name === 'http_requests_total')?.metrics[1]
+        .labels.path
+    ).toBe('/api/router/:id');
   });
 });
