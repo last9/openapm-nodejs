@@ -4,30 +4,30 @@ import parsePrometheusTextFormat from 'parse-prometheus-text-format';
 import request from 'supertest';
 import { test, expect, describe, beforeAll, afterAll } from 'vitest';
 
-import APM from '../src/APM';
+import OpenAPM from '../src/OpenAPM';
 import { addRoutes, sendTestRequests } from './utils';
 
 describe('REDMiddleware', () => {
   const NUMBER_OF_REQUESTS = 300;
-  let apm: APM;
+  let openapm: OpenAPM;
   let app: Express;
   let parsedData: Array<Record<string, any>> = [];
 
   beforeAll(async () => {
-    apm = new APM();
+    openapm = new OpenAPM();
     app = express();
-    app.use(apm.REDMiddleware);
+    app.use(openapm.REDMiddleware);
 
     addRoutes(app);
     app.listen(3002);
 
     await sendTestRequests(app, NUMBER_OF_REQUESTS);
-    const res = await request(apm.metricsServer).get('/metrics');
+    const res = await request(openapm.metricsServer).get('/metrics');
     parsedData = parsePrometheusTextFormat(res.text);
   });
 
   afterAll(async () => {
-    apm.metricsServer?.close(() => {
+    openapm.metricsServer?.close(() => {
       console.log('Closing the metrics server');
     });
   });

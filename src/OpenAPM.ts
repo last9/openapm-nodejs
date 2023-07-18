@@ -14,7 +14,7 @@ import type { IncomingMessage, ServerResponse, Server } from 'http';
 
 import { getHostIpAddress, getPackageJson, getParsedPathname } from './utils';
 
-export interface APMOptions {
+export interface OpenAPMOptions {
   /** Route where the metrics will be exposed
    * @default "/metrics"
    */
@@ -37,7 +37,7 @@ export interface APMOptions {
 
 const packageJson = getPackageJson();
 
-export class APM {
+export class OpenAPM {
   private path: string;
   private metricsServerPort: number;
   private environment: string;
@@ -50,7 +50,7 @@ export class APM {
   private requestsDurationHistogram?: Histogram;
   public metricsServer?: Server;
 
-  constructor(options?: APMOptions) {
+  constructor(options?: OpenAPMOptions) {
     // Initializing all the options
     this.path = options?.path ?? '/metrics';
     this.metricsServerPort = options?.metricsServerPort ?? 9097;
@@ -139,4 +139,4 @@ export class APM {
   );
 }
 
-export default APM;
+export default OpenAPM;

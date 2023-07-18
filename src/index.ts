@@ -1,2 +1,2 @@
-export { default as APM } from './APM';
-export type { APMOptions } from './APM';
+export { default as OpenAPM } from './OpenAPM';
+export type { OpenAPMOptions } from './OpenAPM';

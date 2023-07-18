@@ -3,7 +3,7 @@
 ## Installation
 
 ```
-npm install --save @last9/openapm@0.1.0
+npm install --save @last9/openapm@latest
 ```
 
 ## Usage
@@ -14,12 +14,12 @@ change the port, you can update it through the options
 
 ```js
 const express = require('express)
-const { APM } = require('@last9/openapm')
+const { OpenAPM } = require('@last9/openapm')
 
 const app = express();
-const apm = new APM();
+const openapm = new OpenAPM();
 
-app.use(apm.REDMiddleware);
+app.use(openapm.REDMiddleware);
 
 // ...
 
@@ -32,7 +32,7 @@ app.listen(3000)
 ### Usage
 
 ```js
-const apm = new APM({
+const openapm = new OpenAPM({
   // Options go here
 });
 ```
