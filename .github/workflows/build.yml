@@ -17,15 +17,10 @@ jobs:
         uses: actions/setup-node@v2
         with:
           node-version: 16.20.0
-          registry-url: 'https://npm.pkg.github.com'
-
-      #- name: 🔍 Get npm cache directory path
-      # id: yarn-cache-dir-path
-      # run: echo "::set-output name=dir::$(yarn cache dir)"
 
       - name: 🧶 Get NPM cache
         uses: actions/cache@v3
-        id: cache-npm # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
+        id: cache-npm
         env:
           cache-name: cache-node-modules
         with:
