@@ -1,11 +1,21 @@
 import request from 'supertest';
-import { Express } from 'express';
+import express from 'express';
+import type { Express } from 'express';
 
 export const addRoutes = (app: Express) => {
+  const router = express.Router();
+
+  router.get('/:id', (req, res) => {
+    const { id } = req.params;
+    console.log(id);
+    res.status(200).send(id);
+  });
+  app.use('/api/router/', router);
   app.get('/api/:id', (req, res) => {
     const { id } = req.params;
     res.status(200).send(id);
   });
+
   return app;
 };
 
@@ -16,16 +26,14 @@ function getRandomId() {
 }
 
 export const sendTestRequests = async (app: Express, num: number) => {
-  const out: Array<Record<string, number>> = [];
   for (let index = 0; index < num; index++) {
     const id = getRandomId();
     try {
       const res = await request(app).get(`/api/${id}`);
-      out.push({ [id]: res.status });
     } catch (err) {
       throw new Error(err);
     }
   }
-
-  return out;
+  const id = getRandomId();
+  await request(app).get(`/api/router/${id}`);
 };

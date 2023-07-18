@@ -12,7 +12,12 @@ import type {
 import type { Express, Request } from 'express';
 import type { IncomingMessage, ServerResponse, Server } from 'http';
 
-import { getHostIpAddress, getPackageJson, getParsedPathname } from './utils';
+import {
+  getHostIpAddress,
+  getPackageJson,
+  getParsedPathname,
+  getSanitizedPath
+} from './utils';
 
 export interface OpenAPMOptions {
   /** Route where the metrics will be exposed
@@ -120,21 +125,21 @@ export class OpenAPM {
       res: ServerResponse<IncomingMessage>,
       time: number
     ) => {
-      if (this.path !== req.path) {
-        const parsedPathname = getParsedPathname(req.path ?? '/', undefined);
-        const labels = {
-          path: parsedPathname,
-          status: res.statusCode.toString(),
-          method: req.method as string
-        };
+      const sanitizePathname = getSanitizedPath(req.originalUrl ?? '/');
+      const parsedPathname = getParsedPathname(sanitizePathname, undefined);
 
-        this.requestsCounter
-          ?.labels(labels.path, labels.method, labels.status)
-          .inc();
-        this.requestsDurationHistogram
-          ?.labels(labels.path, labels.method, labels.status)
-          .observe(time);
-      }
+      const labels = {
+        path: parsedPathname,
+        status: res.statusCode.toString(),
+        method: req.method as string
+      };
+
+      this.requestsCounter
+        ?.labels(labels.path, labels.method, labels.status)
+        .inc();
+      this.requestsDurationHistogram
+        ?.labels(labels.path, labels.method, labels.status)
+        .observe(time);
     }
   );
 }
