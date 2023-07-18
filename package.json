@@ -1,5 +1,5 @@
 {
-  "name": "@last9/openapm",
+  "name": "openapm",
   "description": "OpenAPM for Node.js",
   "version": "0.1.0",
   "main": "dist/cjs/index.js",
@@ -68,5 +68,6 @@
   "bugs": {
     "url": "https://github.com/last9/nodejs-openapm/issues"
   },
-  "homepage": "https://github.com/last9/nodejs-openapm#readme"
+  "homepage": "https://github.com/last9/nodejs-openapm#readme",
+  "private": false
 }
