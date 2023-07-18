@@ -1,5 +1,5 @@
 {
-  "name": "openapm",
+  "name": "@last9/openapm",
   "description": "OpenAPM for Node.js",
   "version": "0.1.0",
   "main": "dist/cjs/index.js",
