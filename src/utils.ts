@@ -34,6 +34,15 @@ export const getHostIpAddress = () => {
   return null;
 };
 
+/**
+ *
+ * @param pathname
+ * @param extraMasks Array of regexp for when matched should replace that part of the pathname
+ * @param replacement Defaults to :id, replacement string
+ * @returns The parsed pathname. Example 👇
+ *
+ * @example /users/1/settings -> /users/:id/settings
+ */
 export const getParsedPathname = (
   pathname: string,
   extraMasks?: Array<RegExp>,
@@ -44,6 +53,12 @@ export const getParsedPathname = (
 };
 
 export const getSanitizedPath = (pathname: string) => {
+  /**
+   * Regex will remove any hashes or the search param in the pathname
+   * @example /foo?bar=zar -> /foo
+   * @example /foo#intro  -> /foo
+   * @example /foo?lorem=ipsum&bar=zar -> /foo
+   */
   const sanitizedPath = pathname.replace(
     /(\/[^?#]+)(?:\?[^#]*)?(?:#.*)?$/,
     '$1'
