@@ -7,15 +7,14 @@ import type {
   Counter,
   CounterConfiguration,
   Histogram,
-  HistogramConfiguration,
-  Registry
+  HistogramConfiguration
 } from 'prom-client';
 import type { Express, Request } from 'express';
 import type { IncomingMessage, ServerResponse, Server } from 'http';
 
 import { getHostIpAddress, getPackageJson, getParsedPathname } from './utils';
 
-export interface CDKOptions {
+export interface APMOptions {
   /** Route where the metrics will be exposed
    * @default "/metrics"
    */
@@ -38,7 +37,7 @@ export interface CDKOptions {
 
 const packageJson = getPackageJson();
 
-export class CDK {
+export class APM {
   private path: string;
   private metricsServerPort: number;
   private environment: string;
@@ -51,7 +50,7 @@ export class CDK {
   private requestsDurationHistogram?: Histogram;
   public metricsServer?: Server;
 
-  constructor(options?: CDKOptions) {
+  constructor(options?: APMOptions) {
     // Initializing all the options
     this.path = options?.path ?? '/metrics';
     this.metricsServerPort = options?.metricsServerPort ?? 9097;
@@ -140,4 +139,4 @@ export class CDK {
   );
 }
 
-export default CDK;
+export default APM;

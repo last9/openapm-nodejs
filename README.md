@@ -14,12 +14,12 @@ change the port, you can update it through the options
 
 ```js
 const express = require('express)
-const { CDK } = require('@last9/openapm')
+const { APM } = require('@last9/openapm')
 
 const app = express();
-const cdk = new CDK();
+const apm = new APM();
 
-app.use(cdk.REDMiddleware);
+app.use(apm.REDMiddleware);
 
 // ...
 
@@ -32,7 +32,7 @@ app.listen(3000)
 ### Usage
 
 ```js
-const cdk = new CDK({
+const apm = new APM({
   // Options go here
 });
 ```

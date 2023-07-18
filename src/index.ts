@@ -1,2 +1,2 @@
-export { default as CDK } from "./CDK";
-export type { CDKOptions } from "./CDK";
+export { default as APM } from './APM';
+export type { APMOptions } from './APM';

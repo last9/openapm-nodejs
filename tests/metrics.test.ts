@@ -4,30 +4,30 @@ import parsePrometheusTextFormat from 'parse-prometheus-text-format';
 import request from 'supertest';
 import { test, expect, describe, beforeAll, afterAll } from 'vitest';
 
-import CDK from '../src/CDK';
+import APM from '../src/APM';
 import { addRoutes, sendTestRequests } from './utils';
 
 describe('REDMiddleware', () => {
   const NUMBER_OF_REQUESTS = 300;
-  let cdk: CDK;
+  let apm: APM;
   let app: Express;
   let parsedData: Array<Record<string, any>> = [];
 
   beforeAll(async () => {
-    cdk = new CDK();
+    apm = new APM();
     app = express();
-    app.use(cdk.REDMiddleware);
+    app.use(apm.REDMiddleware);
 
     addRoutes(app);
     app.listen(3002);
 
     await sendTestRequests(app, NUMBER_OF_REQUESTS);
-    const res = await request(cdk.metricsServer).get('/metrics');
+    const res = await request(apm.metricsServer).get('/metrics');
     parsedData = parsePrometheusTextFormat(res.text);
   });
 
   afterAll(async () => {
-    cdk.metricsServer?.close(() => {
+    apm.metricsServer?.close(() => {
       console.log('Closing the metrics server');
     });
   });
