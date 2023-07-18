@@ -1,0 +1,47 @@
+name: 🏗️ Build @last9/openapm
+
+on:
+  push:
+    branches:
+      - '*'
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛎 Checkout
+        uses: actions/checkout@v3
+
+      - name: ⬢ Use Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16.20.0
+          registry-url: 'https://npm.pkg.github.com'
+
+      #- name: 🔍 Get npm cache directory path
+      # id: yarn-cache-dir-path
+      # run: echo "::set-output name=dir::$(yarn cache dir)"
+
+      - name: 🧶 Get NPM cache
+        uses: actions/cache@v3
+        id: cache-npm # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{
+            hashFiles('**/package-lock.json') }},
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: 📦 Install dependencies
+        run: npm install --frozen-lockfile
+
+      - name: 🧪 Test
+        run: npm run test
+
+      - name: 👷 Build
+        run: npm run build
