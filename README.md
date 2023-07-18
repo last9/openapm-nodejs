@@ -1,4 +1,4 @@
-# @last9/cdk-express-js
+# @last9/openapm
 
 ## Installation
 
@@ -14,7 +14,7 @@ change the port, you can update it through the options
 
 ```js
 const express = require('express)
-const { CDK } = require('@last9/cdk-express-js')
+const { CDK } = require('@last9/openapm')
 
 const app = express();
 const cdk = new CDK();

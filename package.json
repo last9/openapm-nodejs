@@ -68,5 +68,6 @@
   "bugs": {
     "url": "https://github.com/last9/nodejs-openapm/issues"
   },
-  "homepage": "https://github.com/last9/nodejs-openapm#readme"
+  "homepage": "https://github.com/last9/nodejs-openapm#readme",
+  "private": false
 }
