@@ -40,7 +40,7 @@ const openapm = new OpenAPM({
 1. `path`: The path at which the metrics will be served. For eg. `/metrics`
 2. `metricsServerPort`: (Optional) The port at which the metricsServer will run.
 3. `environment`: (Optional) The application environment. Defaults to
-   `production.`
+   `production`.
 4. `defaultLabels`: (Optional) Any default labels to be included.
 5. `requestsCounterConfig`: (Optional) Requests counter configuration, same as
    [Counter](https://github.com/siimon/prom-client#counter) in `prom-client`.
