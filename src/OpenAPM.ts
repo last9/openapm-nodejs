@@ -11,6 +11,7 @@ import type {
 } from 'prom-client';
 import type { Express, Request } from 'express';
 import type { IncomingMessage, ServerResponse, Server } from 'http';
+import type { createConnection, createPool, createPoolCluster } from 'mysql2';
 
 import {
   getHostIpAddress,
@@ -18,6 +19,7 @@ import {
   getParsedPathname,
   getSanitizedPath
 } from './utils';
+import { instrumentMySQL } from './clients/mysql';
 
 export interface OpenAPMOptions {
   /** Route where the metrics will be exposed
@@ -142,6 +144,19 @@ export class OpenAPM {
         .observe(time);
     }
   );
+
+  public instrument(
+    moduleName: 'mysql',
+    module: {
+      createConnection: typeof createConnection;
+      createPool: typeof createPool;
+      createPoolCluster: typeof createPoolCluster;
+    }
+  ) {
+    if (moduleName === 'mysql') {
+      instrumentMySQL(module);
+    }
+  }
 }
 
 export default OpenAPM;
