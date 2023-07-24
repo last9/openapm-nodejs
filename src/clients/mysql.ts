@@ -20,7 +20,9 @@ function interceptQueryable(fn: any): any {
 }
 
 const wrapConnection = (connection: Connection) => {
+  // Get ProtoType for the connection
   const connectionProto = Object.getPrototypeOf(connection);
+  // Intercept the query Function
   connectionProto.query = interceptQueryable(connection.query);
   if (typeof connection.execute !== 'undefined') {
     connectionProto.execute = interceptQueryable(connection.execute);
@@ -33,9 +35,11 @@ export const instrumentMySQL = (mysql: {
   createPool: typeof createPool;
   createPoolCluster: typeof createPoolCluster;
 }) => {
+  // Create Proxy for the createConnection
   mysql.createConnection = new Proxy(mysql.createConnection, {
     apply: (target, prop, args) => {
       const connection = Reflect.apply(target, prop, args);
+      // Instrument Connection
       return wrapConnection(connection);
     }
   });
