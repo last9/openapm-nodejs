@@ -19,7 +19,7 @@ import {
   getParsedPathname,
   getSanitizedPath
 } from './utils';
-import { instrumentMySQL } from './clients/mysql';
+import { instrumentMySQL } from './clients/mysql2';
 
 export interface OpenAPMOptions {
   /** Route where the metrics will be exposed
@@ -146,14 +146,18 @@ export class OpenAPM {
   );
 
   public instrument(
-    moduleName: 'mysql',
+    moduleName: 'mysql2',
     module: {
+      /**
+       * Ways to create connection/pool which gets intercepted and instruments
+       * the queryable objects
+       */
       createConnection: typeof createConnection;
       createPool: typeof createPool;
       createPoolCluster: typeof createPoolCluster;
     }
   ) {
-    if (moduleName === 'mysql') {
+    if (moduleName === 'mysql2') {
       instrumentMySQL(module);
     }
   }

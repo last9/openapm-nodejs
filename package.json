@@ -43,7 +43,7 @@
     "eslint-plugin-import": "^2.27.5",
     "eslint-plugin-n": "^15.7.0",
     "eslint-plugin-promise": "^6.1.1",
-    "mysql2": "^3.5.2",
+    "mysql2": "^3.6.0",
     "node-fetch": "^3.3.1",
     "parse-prometheus-text-format": "^1.1.1",
     "prettier": "2.8.8",
@@ -55,6 +55,7 @@
     "vitest": "^0.32.4"
   },
   "dependencies": {
+    "node-sql-parser": "^4.9.0",
     "prom-client": "^14.2.0",
     "response-time": "^2.3.2",
     "url-value-parser": "^2.2.0"
