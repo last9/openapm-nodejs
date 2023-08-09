@@ -98,10 +98,6 @@ function interceptQueryable(
       });
     }
 
-    writeFile('result.json', JSON.stringify(result), () => {
-      console.log('result added to the file');
-    });
-
     return result;
   };
 }
