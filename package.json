@@ -56,13 +56,15 @@
     "vitest": "^0.32.4"
   },
   "dependencies": {
-    "node-sql-parser": "^4.9.0",
     "prom-client": "^14.2.0",
     "response-time": "^2.3.2",
     "url-value-parser": "^2.2.0"
   },
   "peerDependenciesMeta": {
     "mysql2": {
+      "optional": true
+    },
+    "express": {
       "optional": true
     }
   },

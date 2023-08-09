@@ -8,7 +8,6 @@ import type {
   createPool,
   createPoolCluster
 } from 'mysql2';
-import { sqlParser } from '../utils/sqlParser';
 
 ///// Interfaces and Types ///////////////
 export type MetricRegisterFunction = (params: {
@@ -23,12 +22,10 @@ const symbols = {
   WRAP_CONNECTION: Symbol('WRAP_CONNECTION'),
   WRAP_POOL: Symbol('WRAP_POOL'),
   WRAP_GET_CONNECTION_CB: Symbol('WRAP_GET_CONNECTION_CB'),
-  WRAP_POOL_CLUSTER: Symbol('WRAP_POOL_CLUSTER')
+  WRAP_POOL_CLUSTER: Symbol('WRAP_POOL_CLUSTER'),
+  WRAP_POOL_CLUSTER_OF: Symbol('WRAP_POOL_CLUSTER_OF')
 };
 
-const sqlParserOptions = {
-  database: 'MySQL'
-};
 /////////////////////////////////////////
 
 //// Utils /////////////////////////////
@@ -69,17 +66,26 @@ function getConnectionConfig(config: any): ConnectionConfig {
  */
 function interceptQueryable(
   fn: Connection['query'],
-  connectionConfig: Connection['config'] | Pool['config'],
+  connectionConfig:
+    | Connection['config']
+    | Pool['config']
+    | PoolCluster['config'],
   metricRegisterFns: Array<MetricRegisterFunction>
 ): Connection['query'];
 function interceptQueryable(
   fn: Connection['execute'],
-  connectionConfig: Connection['config'] | Pool['config'],
+  connectionConfig:
+    | Connection['config']
+    | Pool['config']
+    | PoolCluster['config'],
   metricRegisterFns: Array<MetricRegisterFunction>
 ): Connection['execute'];
 function interceptQueryable(
   fn: any,
-  connectionConfig: Connection['config'] | Pool['config'],
+  connectionConfig:
+    | Connection['config']
+    | Pool['config']
+    | PoolCluster['config'],
   metricRegisterFns: Array<MetricRegisterFunction>
 ): any {
   return function (
@@ -121,7 +127,7 @@ const wrapConnection = (
   if (!connectionProto?.[symbols.WRAP_CONNECTION]) {
     // Intercept the query Function
     /**
-     * There are two ways in mysql2 library by which one can execurte the sql query
+     * There are two ways in mysql2 library by which one can execute the sql query
      * 1. .query
      * 2. .execute
      */
@@ -180,6 +186,43 @@ const wrapPoolGetConnection = (
   };
 };
 
+const wrapPoolClusterOfFn = (
+  of: PoolCluster['of'],
+  poolClusterConfig: PoolCluster['config'],
+  metricRegisterFns: Array<MetricRegisterFunction>
+) => {
+  return function (
+    this: PoolCluster['of'],
+    ...args: Parameters<PoolCluster['of']>
+  ) {
+    const poolNamespace = of.apply(this, args);
+    const poolNamespaceProto = Object.getPrototypeOf(poolNamespace);
+    if (!poolNamespaceProto?.[symbols.WRAP_POOL_CLUSTER_OF]) {
+      poolNamespaceProto.query = interceptQueryable(
+        poolNamespace.query,
+        poolClusterConfig,
+        metricRegisterFns
+      );
+
+      if (typeof poolNamespace.execute !== 'undefined') {
+        poolNamespaceProto.execute = interceptQueryable(
+          poolNamespace.execute,
+          poolClusterConfig,
+          metricRegisterFns
+        );
+      }
+
+      poolNamespaceProto.getConnection = wrapPoolGetConnection(
+        poolNamespace['getConnection'],
+        metricRegisterFns
+      );
+
+      poolNamespaceProto[symbols.WRAP_POOL_CLUSTER_OF] = true;
+    }
+    return poolNamespace;
+  };
+};
+
 const wrapPool = (
   pool: Pool,
   metricRegisterFns: Array<MetricRegisterFunction>
@@ -216,14 +259,11 @@ const wrapPoolCluster = (
 ) => {
   let poolClusterProto = Object.getPrototypeOf(poolCluster);
   if (!poolClusterProto?.[symbols.WRAP_POOL_CLUSTER]) {
-    poolClusterProto = new Proxy(poolClusterProto, {
-      get: (target, p, receiver) => {
-        if (p === 'of') {
-          console.log('here');
-        }
-        return Reflect.get(target, p, receiver);
-      }
-    });
+    poolClusterProto.of = wrapPoolClusterOfFn(
+      poolCluster.of,
+      poolCluster.config,
+      metricRegisterFns
+    );
     poolClusterProto[symbols.WRAP_POOL_CLUSTER] = true;
   }
   return poolCluster;
@@ -248,17 +288,13 @@ export const instrumentMySQL = (mysql: {
     queryString,
     queryTime
   }) => {
-    const tableList = sqlParser.tableList(queryString, sqlParserOptions);
-    if (tableList.length > 0) {
-      const [operation] = tableList[0].split('::');
-      histogram
-        .labels(
-          connConfig?.database ?? '[db-name]',
-          operation.toUpperCase(),
-          '200'
-        )
-        .observe(queryTime);
-    }
+    histogram
+      .labels(
+        connConfig?.database ?? '[db-name]',
+        queryString.substring(0, 100),
+        '200'
+      )
+      .observe(queryTime);
   };
 
   /**
