@@ -19,7 +19,8 @@ export type MetricRegisterFunction = (params: {
 ////// Constants ////////////////////////
 const symbols = {
   WRAP_CONNECTION: Symbol('WRAP_CONNECTION'),
-  WRAP_POOL: Symbol('WRAP_POOL')
+  WRAP_POOL: Symbol('WRAP_POOL'),
+  WRAP_GET_CONNECTION_CB: Symbol('WRAP_GET_CONNECTION_CB')
 };
 
 const sqlParserOptions = {
@@ -86,8 +87,6 @@ function interceptQueryable(
     const time = parseInt((end - start).toString()) / 1000000;
     const queryString = getQueryStringFromArgument(args[0]);
 
-    console.log(result);
-
     for (const eachFn of metricRegisterFns) {
       eachFn?.({
         queryString,
@@ -136,6 +135,37 @@ const wrapConnection = (
   return connection;
 };
 
+const wrapPoolGetConnectionCB = (
+  cb: Parameters<Pool['getConnection']>['0'],
+  metricRegisterFns: Array<MetricRegisterFunction>
+): Parameters<Pool['getConnection']>['0'] => {
+  return function (this: Parameters<Pool['getConnection']>['0'], ...args) {
+    const [err, conn] = args;
+    wrapConnection(conn, metricRegisterFns);
+    return cb.apply(this, args);
+  };
+};
+
+const wrapPoolGetConnection = (
+  getConnectionFn: Pool['getConnection'],
+  metricRegisterFns: Array<MetricRegisterFunction>
+) => {
+  return function (
+    this: Pool['getConnection'],
+    ...args: Parameters<Pool['getConnection']>
+  ) {
+    let callbackFn = args[args.length - 1];
+    const callbackFnProto = Object.getPrototypeOf(callbackFn);
+
+    if (!callbackFnProto?.[symbols.WRAP_GET_CONNECTION_CB]) {
+      callbackFn = wrapPoolGetConnectionCB(callbackFn, metricRegisterFns);
+      callbackFnProto[symbols.WRAP_GET_CONNECTION_CB] = true;
+    }
+
+    return getConnectionFn.apply(this, args);
+  };
+};
+
 const wrapPool = (
   pool: Pool,
   metricRegisterFns: Array<MetricRegisterFunction>
@@ -156,6 +186,10 @@ const wrapPool = (
       );
     }
 
+    poolProto.getConnection = wrapPoolGetConnection(
+      pool['getConnection'],
+      metricRegisterFns
+    );
     poolProto[symbols.WRAP_POOL] = true;
   }
 
