@@ -11,7 +11,6 @@ import type {
 } from 'prom-client';
 import type { Express, Request } from 'express';
 import type { IncomingMessage, ServerResponse, Server } from 'http';
-import type { createConnection, createPool, createPoolCluster } from 'mysql2';
 
 import {
   getHostIpAddress,
@@ -145,20 +144,16 @@ export class OpenAPM {
     }
   );
 
-  public instrument(
-    moduleName: 'mysql2',
-    module: {
-      /**
-       * Ways to create connection/pool which gets intercepted and instruments
-       * the queryable objects
-       */
-      createConnection: typeof createConnection;
-      createPool: typeof createPool;
-      createPoolCluster: typeof createPoolCluster;
-    }
-  ) {
+  public instrument(moduleName: 'mysql2') {
     if (moduleName === 'mysql2') {
-      instrumentMySQL(module);
+      try {
+        const mysql = require('mysql2');
+        instrumentMySQL(mysql);
+      } catch (error) {
+        throw new Error(
+          "OpenAPM couldn't import the mysql2 package, please install it."
+        );
+      }
     }
   }
 }

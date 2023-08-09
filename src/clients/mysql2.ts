@@ -1,6 +1,7 @@
-import promClient, { Histogram } from 'prom-client';
+import promClient from 'prom-client';
 import type {
   Connection,
+  Pool,
   createConnection,
   createPool,
   createPoolCluster
@@ -9,7 +10,7 @@ import { sqlParser } from '../utils/sqlParser';
 
 ///// Interfaces and Types ///////////////
 export type MetricRegisterFunction = (params: {
-  dbConfig: Connection['config'];
+  connConfig: Connection['config'];
   queryString: string;
   queryTime: number;
 }) => void;
@@ -17,7 +18,8 @@ export type MetricRegisterFunction = (params: {
 
 ////// Constants ////////////////////////
 const symbols = {
-  WRAP_CONNECTION: Symbol('WRAP_CONNECTION')
+  WRAP_CONNECTION: Symbol('WRAP_CONNECTION'),
+  WRAP_POOL: Symbol('WRAP_POOL')
 };
 
 const sqlParserOptions = {
@@ -53,17 +55,17 @@ const getQueryStringFromArgument = (
  */
 function interceptQueryable(
   fn: Connection['query'],
-  connectionConfig: Connection['config'],
+  connectionConfig: Connection['config'] | Pool['config'],
   metricRegisterFns: Array<MetricRegisterFunction>
 ): Connection['query'];
 function interceptQueryable(
   fn: Connection['execute'],
-  connectionConfig: Connection['config'],
+  connectionConfig: Connection['config'] | Pool['config'],
   metricRegisterFns: Array<MetricRegisterFunction>
 ): Connection['execute'];
 function interceptQueryable(
   fn: any,
-  connectionConfig: Connection['config'],
+  connectionConfig: Connection['config'] | Pool['config'],
   metricRegisterFns: Array<MetricRegisterFunction>
 ): any {
   return function (
@@ -76,18 +78,20 @@ function interceptQueryable(
      *
      * @todo Use utility from the prom-client
      *  */
-    const startAt = process.hrtime();
+    const start = process.hrtime.bigint();
     const result = fn.apply(this, args);
-    const diff = process.hrtime(startAt);
+    const end = process.hrtime.bigint();
 
     // Instrumentaion code goes here
-    const time = diff[0] * 1e3 + diff[1] * 1e-6;
-
+    const time = parseInt((end - start).toString()) / 1000000;
     const queryString = getQueryStringFromArgument(args[0]);
+
+    console.log(result);
+
     for (const eachFn of metricRegisterFns) {
       eachFn?.({
         queryString,
-        dbConfig: connectionConfig,
+        connConfig: connectionConfig,
         queryTime: time
       });
     }
@@ -132,6 +136,32 @@ const wrapConnection = (
   return connection;
 };
 
+const wrapPool = (
+  pool: Pool,
+  metricRegisterFns: Array<MetricRegisterFunction>
+) => {
+  const poolProto = Object.getPrototypeOf(pool);
+  if (!poolProto?.[symbols.WRAP_POOL]) {
+    poolProto.query = interceptQueryable(
+      pool.query,
+      pool.config,
+      metricRegisterFns
+    );
+
+    if (typeof pool.execute !== 'undefined') {
+      poolProto.execute = interceptQueryable(
+        pool.execute,
+        pool.config,
+        metricRegisterFns
+      );
+    }
+
+    poolProto[symbols.WRAP_POOL] = true;
+  }
+
+  return pool;
+};
+
 export const instrumentMySQL = (mysql: {
   createConnection: typeof createConnection;
   createPool: typeof createPool;
@@ -147,7 +177,7 @@ export const instrumentMySQL = (mysql: {
 
   //
   const registerDBRequestDuration: MetricRegisterFunction = ({
-    dbConfig,
+    connConfig,
     queryString,
     queryTime
   }) => {
@@ -159,7 +189,7 @@ export const instrumentMySQL = (mysql: {
       const [operation, _, tableName] = tableList[0].split('::');
       histogram
         .labels(
-          dbConfig?.database ?? '[db-name]',
+          connConfig?.database ?? '[db-name]',
           tableName,
           operation.toUpperCase(),
           '200'
@@ -180,12 +210,15 @@ export const instrumentMySQL = (mysql: {
     }
   });
 
-  // mysql.createPool = new Proxy(mysql.createPool, {
-  //   apply: (target, prop, args) => {
-  //     const pool = Reflect.apply(target, prop, args);
-  //     // Instrument Pool
-  //     console.log(pool);
-  //     return pool;
-  //   }
-  // });
+  /**
+   * Create Proxy for the createPool where we will wrap the connection
+   * to intercept the query
+   *  */
+  mysql.createPool = new Proxy(mysql.createPool, {
+    apply: (target, prop, args) => {
+      const pool = Reflect.apply(target, prop, args);
+      // Instrument Pool
+      return wrapPool(pool, [registerDBRequestDuration]);
+    }
+  });
 };
