@@ -3,12 +3,12 @@ import type {
   Connection,
   Pool,
   PoolCluster,
+  Query,
   createConnection,
   createPool,
   createPoolCluster
 } from 'mysql2';
 import { sqlParser } from '../utils/sqlParser';
-import { writeFile } from 'fs';
 
 ///// Interfaces and Types ///////////////
 export type MetricRegisterFunction = (params: {
@@ -83,7 +83,7 @@ function interceptQueryable(
      * @todo Use utility from the prom-client
      *  */
     const start = process.hrtime.bigint();
-    const result = fn.apply(this, args);
+    const result = fn.apply(this, args) as Query;
     const end = process.hrtime.bigint();
 
     // Instrumentaion code goes here
@@ -158,11 +158,12 @@ const wrapPoolGetConnection = (
     ...args: Parameters<Pool['getConnection']>
   ) {
     let callbackFn = args[args.length - 1];
-    const callbackFnProto = Object.getPrototypeOf(callbackFn);
+    const getConnectionFnProto = Object.getPrototypeOf(getConnectionFn);
 
-    if (!callbackFnProto?.[symbols.WRAP_GET_CONNECTION_CB]) {
+    if (!getConnectionFnProto?.[symbols.WRAP_GET_CONNECTION_CB]) {
       callbackFn = wrapPoolGetConnectionCB(callbackFn, metricRegisterFns);
-      callbackFnProto[symbols.WRAP_GET_CONNECTION_CB] = true;
+      args[args.length - 1] = callbackFn;
+      getConnectionFnProto[symbols.WRAP_GET_CONNECTION_CB] = true;
     }
 
     return getConnectionFn.apply(this, args);
