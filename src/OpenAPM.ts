@@ -1,5 +1,5 @@
 import * as os from 'os';
-import express from 'express';
+import http from 'http';
 import ResponseTime from 'response-time';
 import promClient from 'prom-client';
 
@@ -9,7 +9,7 @@ import type {
   Histogram,
   HistogramConfiguration
 } from 'prom-client';
-import type { Express, Request } from 'express';
+import type { Request } from 'express';
 import type { IncomingMessage, ServerResponse, Server } from 'http';
 
 import {
@@ -51,7 +51,6 @@ export class OpenAPM {
   private requestsCounterConfig: CounterConfiguration<string>;
   private requestDurationHistogramConfig: HistogramConfiguration<string>;
 
-  private metricsApp: Express;
   private requestsCounter?: Counter;
   private requestsDurationHistogram?: Histogram;
   public metricsServer?: Server;
@@ -74,9 +73,6 @@ export class OpenAPM {
         labelNames: ['path', 'method', 'status'],
         buckets: promClient.exponentialBuckets(0.25, 1.5, 31)
       };
-
-    // Create the metrics app using express
-    this.metricsApp = express();
 
     this.initiateMetricsRoute();
     this.initiatePromClient();
@@ -104,18 +100,35 @@ export class OpenAPM {
     );
   };
 
+  private gracefullyShutdownServer = () => {
+    console.log('\nShutting down metrics server gracefully...');
+    this.metricsServer?.close(() => {
+      console.log('Metrics server has been closed.');
+      process.exit(0);
+    });
+  };
+
   private initiateMetricsRoute = () => {
-    // Adding merics route handler
-    this.metricsApp.get(this.path, async (req, res) => {
-      // Adding Content-Type header
-      res.set('Content-Type', promClient.register.contentType);
-      return res.end(await promClient.register.metrics());
+    // Creating native http server
+    this.metricsServer = http.createServer(async (req, res) => {
+      // Sanitize the path
+      const path = getSanitizedPath(req.url ?? '/');
+      if (path === this.path && req.method === 'GET') {
+        res.setHeader('Content-Type', promClient.register.contentType);
+        return res.end(await promClient.register.metrics());
+      } else {
+        res.statusCode = 404;
+        res.end('404 Not found');
+      }
     });
 
-    // Listening metrics server
-    this.metricsServer = this.metricsApp.listen(this.metricsServerPort, () => {
-      console.log(`Metrics server started at port ${this.metricsServerPort}`);
+    // Start listening at the given port defaults to 9097
+    this.metricsServer?.listen(this.metricsServerPort, () => {
+      console.log(`Metrics server running at ${this.metricsServerPort}`);
     });
+
+    process.on('SIGINT', this.gracefullyShutdownServer);
+    process.on('SIGTERM', this.gracefullyShutdownServer);
   };
 
   // Middleware Function, which is essentially the response-time middleware with a callback that captures the
