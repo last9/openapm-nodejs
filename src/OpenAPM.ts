@@ -145,15 +145,13 @@ export class OpenAPM {
   );
 
   public instrument(moduleName: 'mysql2') {
-    if (moduleName === 'mysql2') {
-      try {
-        const mysql = require('mysql2');
-        instrumentMySQL(mysql);
-      } catch (error) {
-        throw new Error(
-          "OpenAPM couldn't import the mysql2 package, please install it."
-        );
-      }
+    try {
+      const mysql2 = require('mysql2');
+      instrumentMySQL(mysql2);
+    } catch (error) {
+      throw new Error(
+        "OpenAPM couldn't import the mysql2 package, please install it."
+      );
     }
   }
 }

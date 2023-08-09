@@ -171,7 +171,7 @@ export const instrumentMySQL = (mysql: {
   const histogram = new promClient.Histogram({
     name: 'db_requests_duration_milliseconds',
     help: 'Duration of DB transactions in milliseconds',
-    labelNames: ['database_name', 'table_name', 'query', 'status'],
+    labelNames: ['database_name', 'query', 'status'],
     buckets: promClient.exponentialBuckets(0.25, 1.5, 31)
   });
 
@@ -182,15 +182,11 @@ export const instrumentMySQL = (mysql: {
     queryTime
   }) => {
     const tableList = sqlParser.tableList(queryString, sqlParserOptions);
-    // for (let i = 0;  i < tableList.length; i++) {
-
-    // }
     if (tableList.length > 0) {
-      const [operation, _, tableName] = tableList[0].split('::');
+      const [operation] = tableList[0].split('::');
       histogram
         .labels(
           connConfig?.database ?? '[db-name]',
-          tableName,
           operation.toUpperCase(),
           '200'
         )

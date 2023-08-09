@@ -12,7 +12,7 @@
     "emitDeclarationOnly": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "types": ["node"],
+    "types": ["node", "mysql2"],
     "outDir": "dist"
   },
   "include": ["src/**/*"],
