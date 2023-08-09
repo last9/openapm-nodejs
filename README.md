@@ -83,6 +83,9 @@ npm install
 ```
 npm run build
 ```
+# Grafana Dashboard View
+![APM Dashboard](images/apm-dashboard-1.png)
+![APM Dashboard](images/apm-dashboard-2.png)
 
 # About Last9
 
