@@ -2,11 +2,13 @@ import promClient from 'prom-client';
 import type {
   Connection,
   Pool,
+  PoolCluster,
   createConnection,
   createPool,
   createPoolCluster
 } from 'mysql2';
 import { sqlParser } from '../utils/sqlParser';
+import { writeFile } from 'fs';
 
 ///// Interfaces and Types ///////////////
 export type MetricRegisterFunction = (params: {
@@ -20,7 +22,8 @@ export type MetricRegisterFunction = (params: {
 const symbols = {
   WRAP_CONNECTION: Symbol('WRAP_CONNECTION'),
   WRAP_POOL: Symbol('WRAP_POOL'),
-  WRAP_GET_CONNECTION_CB: Symbol('WRAP_GET_CONNECTION_CB')
+  WRAP_GET_CONNECTION_CB: Symbol('WRAP_GET_CONNECTION_CB'),
+  WRAP_POOL_CLUSTER: Symbol('WRAP_POOL_CLUSTER')
 };
 
 const sqlParserOptions = {
@@ -95,6 +98,10 @@ function interceptQueryable(
       });
     }
 
+    writeFile('result.json', JSON.stringify(result), () => {
+      console.log('result added to the file');
+    });
+
     return result;
   };
 }
@@ -140,7 +147,7 @@ const wrapPoolGetConnectionCB = (
   metricRegisterFns: Array<MetricRegisterFunction>
 ): Parameters<Pool['getConnection']>['0'] => {
   return function (this: Parameters<Pool['getConnection']>['0'], ...args) {
-    const [err, conn] = args;
+    const [_, conn] = args;
     wrapConnection(conn, metricRegisterFns);
     return cb.apply(this, args);
   };
@@ -196,6 +203,18 @@ const wrapPool = (
   return pool;
 };
 
+const wrapPoolCluster = (
+  poolCluster: PoolCluster,
+  metricRegisterFns: Array<MetricRegisterFunction>
+) => {
+  let poolClusterProto = Object.getPrototypeOf(poolCluster);
+  if (!poolClusterProto?.[symbols.WRAP_POOL_CLUSTER]) {
+    poolClusterProto = new Proxy(poolClusterProto, {});
+    poolClusterProto[symbols.WRAP_POOL_CLUSTER] = true;
+  }
+  return poolCluster;
+};
+
 export const instrumentMySQL = (mysql: {
   createConnection: typeof createConnection;
   createPool: typeof createPool;
@@ -249,6 +268,18 @@ export const instrumentMySQL = (mysql: {
       const pool = Reflect.apply(target, prop, args);
       // Instrument Pool
       return wrapPool(pool, [registerDBRequestDuration]);
+    }
+  });
+
+  /**
+   * Create Proxy for the createPoolCluster where we will wrap the connection
+   * to intercept the query
+   *  */
+  mysql.createPoolCluster = new Proxy(mysql.createPoolCluster, {
+    apply: (target, prop, args) => {
+      const poolCluster = Reflect.apply(target, prop, args);
+      // Instrument poolCluster
+      return wrapPoolCluster(poolCluster, [registerDBRequestDuration]);
     }
   });
 };
