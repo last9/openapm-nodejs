@@ -1,9 +1,9 @@
 import promClient from 'prom-client';
 import type {
   Connection,
+  ConnectionConfig,
   Pool,
   PoolCluster,
-  Query,
   createConnection,
   createPool,
   createPoolCluster
@@ -49,6 +49,16 @@ const getQueryStringFromArgument = (
 
   return '';
 };
+
+function getConnectionConfig(poolConfig: {
+  connectionConfig: ConnectionConfig;
+}): ConnectionConfig;
+function getConnectionConfig(
+  connectionConfig: ConnectionConfig
+): ConnectionConfig;
+function getConnectionConfig(config: any): ConnectionConfig {
+  return config.connectionConfig ?? config;
+}
 //////////////////////////////////////
 
 /**
@@ -83,7 +93,7 @@ function interceptQueryable(
      * @todo Use utility from the prom-client
      *  */
     const start = process.hrtime.bigint();
-    const result = fn.apply(this, args) as Query;
+    const result = fn.apply(this, args) as ReturnType<Connection['query']>;
     const end = process.hrtime.bigint();
 
     // Instrumentaion code goes here
@@ -93,7 +103,7 @@ function interceptQueryable(
     for (const eachFn of metricRegisterFns) {
       eachFn?.({
         queryString,
-        connConfig: connectionConfig,
+        connConfig: getConnectionConfig(connectionConfig as any),
         queryTime: time
       });
     }
@@ -206,7 +216,14 @@ const wrapPoolCluster = (
 ) => {
   let poolClusterProto = Object.getPrototypeOf(poolCluster);
   if (!poolClusterProto?.[symbols.WRAP_POOL_CLUSTER]) {
-    poolClusterProto = new Proxy(poolClusterProto, {});
+    poolClusterProto = new Proxy(poolClusterProto, {
+      get: (target, p, receiver) => {
+        if (p === 'of') {
+          console.log('here');
+        }
+        return Reflect.get(target, p, receiver);
+      }
+    });
     poolClusterProto[symbols.WRAP_POOL_CLUSTER] = true;
   }
   return poolCluster;
