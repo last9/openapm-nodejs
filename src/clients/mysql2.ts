@@ -95,17 +95,18 @@ export function interceptQueryable(
   ) {
     let queryStatus: 'success' | 'failure' | 'not_determined' =
       'not_determined';
-    let callback = args[args.length - 1];
-    callback = callback
-      ? function (
-          this: Parameters<Connection['query']>['2'],
-          ...args: Parameters<NonNullable<Parameters<Connection['query']>['2']>>
-        ) {
-          const [err] = args;
-          queryStatus = err ? 'failure' : 'success';
-          return callback?.apply(this, args);
-        }
-      : callback;
+    const cbIndex = args.length - 1;
+    let callback = args[cbIndex];
+    callback = function (
+      this: Parameters<Connection['query']>['2'],
+      ...args: Parameters<NonNullable<Parameters<Connection['query']>['2']>>
+    ) {
+      const [err] = args;
+      queryStatus = err ? 'failure' : 'success';
+      return callback?.apply(this, args);
+    };
+
+    args[cbIndex] = callback;
 
     /**
      * Borrowed from response-time library which we use for express.js middleware
