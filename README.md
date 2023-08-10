@@ -8,6 +8,11 @@ npm install --save @last9/openapm@latest
 
 ## Usage
 
+1. [Express](#express)
+2. [MySQL](#mysql)
+
+### Express
+
 In the example below, the metrics will be served on `localhost:9097/metrics`. To
 change the port, you can update it through the options
 ([See the options documentation](#options)).
@@ -25,6 +30,14 @@ app.use(openapm.REDMiddleware);
 
 app.listen(3000)
 
+```
+
+### MySQL
+
+To instrument the [mysql2](https://www.npmjs.com/package/mysql2) package, you just need to add one line of code. Make sure to add this line of code before you initialize db connection/pool/poolCluster.
+
+```js
+openapm.instrument('mysql2');
 ```
 
 ## Options
@@ -45,6 +58,7 @@ const openapm = new OpenAPM({
 5. `requestsCounterConfig`: (Optional) Requests counter configuration, same as
    [Counter](https://github.com/siimon/prom-client#counter) in `prom-client`.
    Defaults to
+
    ```js
    {
       name: 'http_requests_total',
@@ -52,6 +66,7 @@ const openapm = new OpenAPM({
       labelNames: ['path', 'method', 'status'],
     }
    ```
+
 6. `requestDurationHistogramConfig`: (Optional) Requests Duration histogram
    configuration, same as
    [Histogram](https://github.com/siimon/prom-client#histogram) in
@@ -83,7 +98,9 @@ npm install
 ```
 npm run build
 ```
+
 # Grafana Dashboard View
+
 ![APM Dashboard](images/apm-dashboard-1.png)
 ![APM Dashboard](images/apm-dashboard-2.png)
 

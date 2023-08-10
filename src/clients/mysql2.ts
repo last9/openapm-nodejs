@@ -1,22 +1,14 @@
-import promClient from 'prom-client';
+import promClient, { Histogram } from 'prom-client';
 import type {
   Connection,
   ConnectionConfig,
   Pool,
   PoolCluster,
+  Query,
   createConnection,
   createPool,
   createPoolCluster
 } from 'mysql2';
-
-///// Interfaces and Types ///////////////
-export type MetricRegisterFunction = (params: {
-  connConfig: Connection['config'];
-  queryString: string;
-  queryTime: number;
-  queryStatus: 'success' | 'failure' | 'not_determined';
-}) => void;
-//////////////////////////////////////////
 
 ////// Constants ////////////////////////
 const symbols = {
@@ -31,23 +23,6 @@ const symbols = {
 /////////////////////////////////////////
 
 //// Utils /////////////////////////////
-const getQueryStringFromArgument = (
-  arg:
-    | string
-    | {
-        sql: string;
-      }
-) => {
-  if (typeof arg === 'string') {
-    return arg;
-  }
-
-  if (typeof arg.sql === 'string') {
-    return arg.sql;
-  }
-
-  return '';
-};
 
 function getConnectionConfig(poolConfig: {
   connectionConfig: ConnectionConfig;
@@ -58,7 +33,14 @@ function getConnectionConfig(
 function getConnectionConfig(config: any): ConnectionConfig {
   return config.connectionConfig ?? config;
 }
+
 //////////////////////////////////////
+
+let histogram: Histogram;
+
+const registerResult = (result: Query, time: number, dbName: string) => {
+  histogram.labels(dbName, result.sql.substring(0, 100)).observe(time);
+};
 
 /**
  *
@@ -71,95 +53,58 @@ export function interceptQueryable(
   connectionConfig:
     | Connection['config']
     | Pool['config']
-    | PoolCluster['config'],
-  metricRegisterFns: Array<MetricRegisterFunction>
+    | PoolCluster['config']
 ): Connection['query'];
 export function interceptQueryable(
   fn: Connection['execute'],
   connectionConfig:
     | Connection['config']
     | Pool['config']
-    | PoolCluster['config'],
-  metricRegisterFns: Array<MetricRegisterFunction>
+    | PoolCluster['config']
 ): Connection['execute'];
 export function interceptQueryable(
   fn: any,
   connectionConfig:
     | Connection['config']
     | Pool['config']
-    | PoolCluster['config'],
-  metricRegisterFns: Array<MetricRegisterFunction>
+    | PoolCluster['config']
 ): any {
   return function (
     this: Connection['query'] | Connection['execute'],
     ...args: Parameters<Connection['query'] | Connection['execute']>
   ) {
-    const queryableProto = Object.getPrototypeOf(fn);
-    let queryStatus: 'success' | 'failure' | 'not_determined' =
-      'not_determined';
-
-    if (!queryableProto?.[symbols.WRAP_QUERYABLE_CB]) {
-      const cbIndex = args.length - 1;
-      const originalCallback = args[cbIndex] as Parameters<
-        Connection['query']
-      >['2'];
-      const newCallback = function (
-        this: Parameters<Connection['query']>['2'],
-        ...args: Parameters<NonNullable<Parameters<Connection['query']>['2']>>
-      ) {
-        const [err] = args;
-        queryStatus = err ? 'failure' : 'success';
-        return originalCallback?.apply(this, args);
-      };
-
-      args[cbIndex] = newCallback;
-      queryableProto[symbols.WRAP_QUERYABLE_CB] = true;
-    }
-
-    /**
-     * Borrowed from response-time library which we use for express.js middleware
-     * so that we get consistent measurement all across
-     *
-     * @todo Use utility from the prom-client
-     *  */
-    const start = process.hrtime.bigint();
+    const end = histogram.startTimer();
     const result = fn.apply(this, args) as ReturnType<Connection['query']>;
-    const end = process.hrtime.bigint();
+    const time = end();
 
-    // Instrumentaion code goes here
-    const time = parseInt((end - start).toString()) / 1000000;
-    const queryString = getQueryStringFromArgument(args[0]);
-
-    for (const eachFn of metricRegisterFns) {
-      eachFn?.({
-        queryString,
-        connConfig: getConnectionConfig(connectionConfig as any),
-        queryTime: time,
-        queryStatus
-      });
-    }
+    registerResult(
+      result,
+      time,
+      getConnectionConfig(connectionConfig as any).database ?? '[db-name]'
+    );
 
     return result;
   };
 }
 
-export const wrapConnection = (
-  connection: Connection,
-  metricRegisterFns: Array<MetricRegisterFunction>
-) => {
+/**
+ *  The function will get the prototype of the connection object and mutate the values of queryable
+ * with the intercepted versions of them
+ *
+ * @param connection Connection object that contains queryables
+ * @param metricRegisterFns
+ * @returns Returns wrapped connection
+ */
+export const wrapConnection = (connection: Connection) => {
   // Get ProtoType for the connection
   const connectionProto = Object.getPrototypeOf(connection);
   if (!connectionProto?.[symbols.WRAP_CONNECTION]) {
-    // Intercept the query Function
     /**
-     * There are two ways in mysql2 library by which one can execute the sql query
-     * 1. .query
-     * 2. .execute
+     * Intercept the query Function
      */
     connectionProto.query = interceptQueryable(
       connection.query,
-      connection.config,
-      metricRegisterFns
+      connection.config
     );
     /**
      * Intercept only if the execute is available
@@ -167,8 +112,7 @@ export const wrapConnection = (
     if (typeof connection.execute !== 'undefined') {
       connectionProto.execute = interceptQueryable(
         connection.execute,
-        connection.config,
-        metricRegisterFns
+        connection.config
       );
     }
     /**
@@ -180,19 +124,17 @@ export const wrapConnection = (
 };
 
 export const wrapPoolGetConnectionCB = (
-  cb: Parameters<Pool['getConnection']>['0'],
-  metricRegisterFns: Array<MetricRegisterFunction>
+  cb: Parameters<Pool['getConnection']>['0']
 ): Parameters<Pool['getConnection']>['0'] => {
   return function (this: Parameters<Pool['getConnection']>['0'], ...args) {
     const [_, conn] = args;
-    wrapConnection(conn, metricRegisterFns);
+    wrapConnection(conn);
     return cb.apply(this, args);
   };
 };
 
 export const wrapPoolGetConnection = (
-  getConnectionFn: Pool['getConnection'],
-  metricRegisterFns: Array<MetricRegisterFunction>
+  getConnectionFn: Pool['getConnection']
 ) => {
   return function (
     this: Pool['getConnection'],
@@ -202,7 +144,7 @@ export const wrapPoolGetConnection = (
     const getConnectionFnProto = Object.getPrototypeOf(getConnectionFn);
 
     if (!getConnectionFnProto?.[symbols.WRAP_GET_CONNECTION_CB]) {
-      callbackFn = wrapPoolGetConnectionCB(callbackFn, metricRegisterFns);
+      callbackFn = wrapPoolGetConnectionCB(callbackFn);
       args[args.length - 1] = callbackFn;
       getConnectionFnProto[symbols.WRAP_GET_CONNECTION_CB] = true;
     }
@@ -213,8 +155,7 @@ export const wrapPoolGetConnection = (
 
 export const wrapPoolClusterOfFn = (
   of: PoolCluster['of'],
-  poolClusterConfig: PoolCluster['config'],
-  metricRegisterFns: Array<MetricRegisterFunction>
+  poolClusterConfig: PoolCluster['config']
 ) => {
   return function (
     this: PoolCluster['of'],
@@ -225,21 +166,18 @@ export const wrapPoolClusterOfFn = (
     if (!poolNamespaceProto?.[symbols.WRAP_POOL_CLUSTER_OF]) {
       poolNamespaceProto.query = interceptQueryable(
         poolNamespace.query,
-        poolClusterConfig,
-        metricRegisterFns
+        poolClusterConfig
       );
 
       if (typeof poolNamespace.execute !== 'undefined') {
         poolNamespaceProto.execute = interceptQueryable(
           poolNamespace.execute,
-          poolClusterConfig,
-          metricRegisterFns
+          poolClusterConfig
         );
       }
 
       poolNamespaceProto.getConnection = wrapPoolGetConnection(
-        poolNamespace['getConnection'],
-        metricRegisterFns
+        poolNamespace['getConnection']
       );
 
       poolNamespaceProto[symbols.WRAP_POOL_CLUSTER_OF] = true;
@@ -248,46 +186,35 @@ export const wrapPoolClusterOfFn = (
   };
 };
 
-export const wrapPool = (
-  pool: Pool,
-  metricRegisterFns: Array<MetricRegisterFunction>
-) => {
+/**
+ * This function will get the proto type of the pool and intercept the queryable functions.
+ * It will also wrap getConnection function of the pool so that it can wrap the callback function which consists of the db connection.
+ * @param pool MySQL Pool
+ * @param metricRegisterFns
+ * @returns MySQL Pool
+ */
+export const wrapPool = (pool: Pool) => {
   const poolProto = Object.getPrototypeOf(pool);
   if (!poolProto?.[symbols.WRAP_POOL]) {
-    poolProto.query = interceptQueryable(
-      pool.query,
-      pool.config,
-      metricRegisterFns
-    );
+    poolProto.query = interceptQueryable(pool.query, pool.config);
 
     if (typeof pool.execute !== 'undefined') {
-      poolProto.execute = interceptQueryable(
-        pool.execute,
-        pool.config,
-        metricRegisterFns
-      );
+      poolProto.execute = interceptQueryable(pool.execute, pool.config);
     }
 
-    poolProto.getConnection = wrapPoolGetConnection(
-      pool['getConnection'],
-      metricRegisterFns
-    );
+    poolProto.getConnection = wrapPoolGetConnection(pool['getConnection']);
     poolProto[symbols.WRAP_POOL] = true;
   }
 
   return pool;
 };
 
-export const wrapPoolCluster = (
-  poolCluster: PoolCluster,
-  metricRegisterFns: Array<MetricRegisterFunction>
-) => {
+export const wrapPoolCluster = (poolCluster: PoolCluster) => {
   let poolClusterProto = Object.getPrototypeOf(poolCluster);
   if (!poolClusterProto?.[symbols.WRAP_POOL_CLUSTER]) {
     poolClusterProto.of = wrapPoolClusterOfFn(
       poolCluster.of,
-      poolCluster.config,
-      metricRegisterFns
+      poolCluster.config
     );
     poolClusterProto[symbols.WRAP_POOL_CLUSTER] = true;
   }
@@ -300,28 +227,12 @@ export const instrumentMySQL = (mysql: {
   createPoolCluster: typeof createPoolCluster;
 }) => {
   // Default histogram metrics
-  const histogram = new promClient.Histogram({
+  histogram = new promClient.Histogram({
     name: 'db_requests_duration_milliseconds',
     help: 'Duration of DB transactions in milliseconds',
-    labelNames: ['database_name', 'query', 'status'],
+    labelNames: ['database_name', 'query'],
     buckets: promClient.exponentialBuckets(0.25, 1.5, 31)
   });
-
-  //
-  const registerDBRequestDuration: MetricRegisterFunction = ({
-    connConfig,
-    queryString,
-    queryTime,
-    queryStatus
-  }) => {
-    histogram
-      .labels(
-        connConfig?.database ?? '[db-name]',
-        queryString.substring(0, 100),
-        queryStatus
-      )
-      .observe(queryTime);
-  };
 
   /**
    * Create Proxy for the createConnection where we will wrap the connection
@@ -331,7 +242,7 @@ export const instrumentMySQL = (mysql: {
     apply: (target, prop, args) => {
       const connection = Reflect.apply(target, prop, args);
       // Instrument Connection
-      return wrapConnection(connection, [registerDBRequestDuration]);
+      return wrapConnection(connection);
     }
   });
 
@@ -343,7 +254,7 @@ export const instrumentMySQL = (mysql: {
     apply: (target, prop, args) => {
       const pool = Reflect.apply(target, prop, args);
       // Instrument Pool
-      return wrapPool(pool, [registerDBRequestDuration]);
+      return wrapPool(pool);
     }
   });
 
@@ -355,7 +266,7 @@ export const instrumentMySQL = (mysql: {
     apply: (target, prop, args) => {
       const poolCluster = Reflect.apply(target, prop, args);
       // Instrument poolCluster
-      return wrapPoolCluster(poolCluster, [registerDBRequestDuration]);
+      return wrapPoolCluster(poolCluster);
     }
   });
 };

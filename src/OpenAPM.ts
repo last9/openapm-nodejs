@@ -100,14 +100,6 @@ export class OpenAPM {
     );
   };
 
-  private gracefullyShutdownServer = () => {
-    console.log('\nShutting down metrics server gracefully...');
-    this.metricsServer?.close(() => {
-      console.log('Metrics server has been closed.');
-      process.exit(0);
-    });
-  };
-
   private initiateMetricsRoute = () => {
     // Creating native http server
     this.metricsServer = http.createServer(async (req, res) => {
@@ -126,9 +118,6 @@ export class OpenAPM {
     this.metricsServer?.listen(this.metricsServerPort, () => {
       console.log(`Metrics server running at ${this.metricsServerPort}`);
     });
-
-    process.on('SIGINT', this.gracefullyShutdownServer);
-    process.on('SIGTERM', this.gracefullyShutdownServer);
   };
 
   // Middleware Function, which is essentially the response-time middleware with a callback that captures the
