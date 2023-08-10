@@ -302,13 +302,14 @@ export const instrumentMySQL = (mysql: {
   const registerDBRequestDuration: MetricRegisterFunction = ({
     connConfig,
     queryString,
-    queryTime
+    queryTime,
+    queryStatus
   }) => {
     histogram
       .labels(
         connConfig?.database ?? '[db-name]',
         queryString.substring(0, 100),
-        '200'
+        queryStatus
       )
       .observe(queryTime);
   };
