@@ -24,7 +24,8 @@ const symbols = {
   WRAP_POOL: Symbol('WRAP_POOL'),
   WRAP_GET_CONNECTION_CB: Symbol('WRAP_GET_CONNECTION_CB'),
   WRAP_POOL_CLUSTER: Symbol('WRAP_POOL_CLUSTER'),
-  WRAP_POOL_CLUSTER_OF: Symbol('WRAP_POOL_CLUSTER_OF')
+  WRAP_POOL_CLUSTER_OF: Symbol('WRAP_POOL_CLUSTER_OF'),
+  WRAP_QUERYABLE_CB: Symbol('WRAP_QUERYABLE_CB')
 };
 
 /////////////////////////////////////////
@@ -93,20 +94,27 @@ export function interceptQueryable(
     this: Connection['query'] | Connection['execute'],
     ...args: Parameters<Connection['query'] | Connection['execute']>
   ) {
+    const queryableProto = Object.getPrototypeOf(fn);
     let queryStatus: 'success' | 'failure' | 'not_determined' =
       'not_determined';
-    const cbIndex = args.length - 1;
-    let callback = args[cbIndex];
-    callback = function (
-      this: Parameters<Connection['query']>['2'],
-      ...args: Parameters<NonNullable<Parameters<Connection['query']>['2']>>
-    ) {
-      const [err] = args;
-      queryStatus = err ? 'failure' : 'success';
-      return callback?.apply(this, args);
-    };
 
-    args[cbIndex] = callback;
+    if (!queryableProto?.[symbols.WRAP_QUERYABLE_CB]) {
+      const cbIndex = args.length - 1;
+      const originalCallback = args[cbIndex] as Parameters<
+        Connection['query']
+      >['2'];
+      const newCallback = function (
+        this: Parameters<Connection['query']>['2'],
+        ...args: Parameters<NonNullable<Parameters<Connection['query']>['2']>>
+      ) {
+        const [err] = args;
+        queryStatus = err ? 'failure' : 'success';
+        return originalCallback?.apply(this, args);
+      };
+
+      args[cbIndex] = newCallback;
+      queryableProto[symbols.WRAP_QUERYABLE_CB] = true;
+    }
 
     /**
      * Borrowed from response-time library which we use for express.js middleware
