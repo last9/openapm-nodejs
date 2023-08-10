@@ -14,6 +14,7 @@ export type MetricRegisterFunction = (params: {
   connConfig: Connection['config'];
   queryString: string;
   queryTime: number;
+  queryStatus: 'success' | 'failure' | 'not_determined';
 }) => void;
 //////////////////////////////////////////
 
@@ -64,7 +65,7 @@ function getConnectionConfig(config: any): ConnectionConfig {
  * @param connectionConfig config for the connection/pool/pool cluster
  * @param metricRegisterFns array of functions that could be used to register metrics
  */
-function interceptQueryable(
+export function interceptQueryable(
   fn: Connection['query'],
   connectionConfig:
     | Connection['config']
@@ -72,7 +73,7 @@ function interceptQueryable(
     | PoolCluster['config'],
   metricRegisterFns: Array<MetricRegisterFunction>
 ): Connection['query'];
-function interceptQueryable(
+export function interceptQueryable(
   fn: Connection['execute'],
   connectionConfig:
     | Connection['config']
@@ -80,7 +81,7 @@ function interceptQueryable(
     | PoolCluster['config'],
   metricRegisterFns: Array<MetricRegisterFunction>
 ): Connection['execute'];
-function interceptQueryable(
+export function interceptQueryable(
   fn: any,
   connectionConfig:
     | Connection['config']
@@ -92,6 +93,20 @@ function interceptQueryable(
     this: Connection['query'] | Connection['execute'],
     ...args: Parameters<Connection['query'] | Connection['execute']>
   ) {
+    let queryStatus: 'success' | 'failure' | 'not_determined' =
+      'not_determined';
+    let callback = args[args.length - 1];
+    callback = callback
+      ? function (
+          this: Parameters<Connection['query']>['2'],
+          ...args: Parameters<NonNullable<Parameters<Connection['query']>['2']>>
+        ) {
+          const [err] = args;
+          queryStatus = err ? 'failure' : 'success';
+          return callback?.apply(this, args);
+        }
+      : callback;
+
     /**
      * Borrowed from response-time library which we use for express.js middleware
      * so that we get consistent measurement all across
@@ -110,7 +125,8 @@ function interceptQueryable(
       eachFn?.({
         queryString,
         connConfig: getConnectionConfig(connectionConfig as any),
-        queryTime: time
+        queryTime: time,
+        queryStatus
       });
     }
 
@@ -118,7 +134,7 @@ function interceptQueryable(
   };
 }
 
-const wrapConnection = (
+export const wrapConnection = (
   connection: Connection,
   metricRegisterFns: Array<MetricRegisterFunction>
 ) => {
@@ -154,7 +170,7 @@ const wrapConnection = (
   return connection;
 };
 
-const wrapPoolGetConnectionCB = (
+export const wrapPoolGetConnectionCB = (
   cb: Parameters<Pool['getConnection']>['0'],
   metricRegisterFns: Array<MetricRegisterFunction>
 ): Parameters<Pool['getConnection']>['0'] => {
@@ -165,7 +181,7 @@ const wrapPoolGetConnectionCB = (
   };
 };
 
-const wrapPoolGetConnection = (
+export const wrapPoolGetConnection = (
   getConnectionFn: Pool['getConnection'],
   metricRegisterFns: Array<MetricRegisterFunction>
 ) => {
@@ -186,7 +202,7 @@ const wrapPoolGetConnection = (
   };
 };
 
-const wrapPoolClusterOfFn = (
+export const wrapPoolClusterOfFn = (
   of: PoolCluster['of'],
   poolClusterConfig: PoolCluster['config'],
   metricRegisterFns: Array<MetricRegisterFunction>
@@ -223,7 +239,7 @@ const wrapPoolClusterOfFn = (
   };
 };
 
-const wrapPool = (
+export const wrapPool = (
   pool: Pool,
   metricRegisterFns: Array<MetricRegisterFunction>
 ) => {
@@ -253,7 +269,7 @@ const wrapPool = (
   return pool;
 };
 
-const wrapPoolCluster = (
+export const wrapPoolCluster = (
   poolCluster: PoolCluster,
   metricRegisterFns: Array<MetricRegisterFunction>
 ) => {
