@@ -1,4 +1,3 @@
-import * as os from 'os';
 import express, { Express } from 'express';
 import parsePrometheusTextFormat from 'parse-prometheus-text-format';
 import request from 'supertest';

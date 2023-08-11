@@ -11,7 +11,7 @@ import type {
 } from 'mysql2';
 
 ////// Constants ////////////////////////
-const symbols = {
+export const symbols = {
   WRAP_CONNECTION: Symbol('WRAP_CONNECTION'),
   WRAP_POOL: Symbol('WRAP_POOL'),
   WRAP_GET_CONNECTION_CB: Symbol('WRAP_GET_CONNECTION_CB'),
