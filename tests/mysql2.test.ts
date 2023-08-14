@@ -1,36 +1,101 @@
-import sinon from 'sinon';
-import { describe, beforeAll, expect, test } from 'vitest';
+import { describe, beforeAll, expect, test, vi, afterAll } from 'vitest';
+import request from 'supertest';
+import parsePrometheusTextFormat from 'parse-prometheus-text-format';
 import { instrumentMySQL, symbols } from '../src/clients/mysql2';
+import OpenAPM from '../src/OpenAPM';
 
 describe('mysql2', () => {
-  let mockMysql2;
+  let mockMysql2, mockConn, mockPool, mockPoolCluster, openapm;
 
   beforeAll(() => {
     mockMysql2 = {
-      createConnection: sinon.stub().returns({}),
-      createPool: sinon.stub().returns({
-        getConnection: sinon.stub().returns({})
+      createConnection: vi.fn(() => {
+        return {
+          query: vi.fn((sql) => {
+            return {};
+          }),
+          execute: vi.fn((sql) => {
+            return {};
+          })
+        };
       }),
-      createPoolCluster: sinon.stub().returns({
-        of: sinon.stub().returns({})
+      createPool: vi.fn(() => {
+        return {
+          query: vi.fn((sql) => {
+            return {};
+          }),
+          execute: vi.fn((sql) => {
+            return {};
+          }),
+          getConnection: vi.fn((cb) => {
+            cb(null, {
+              query: vi.fn((sql) => {
+                return {};
+              }),
+              execute: vi.fn((sql) => {
+                return {};
+              })
+            });
+          })
+        };
+      }),
+      createPoolCluster: vi.fn(() => {
+        return {
+          of: vi.fn(() => {
+            return {
+              query: vi.fn((sql) => {
+                return {};
+              }),
+              execute: vi.fn((sql) => {
+                return {};
+              }),
+              getConnection: vi.fn((cb) => {
+                cb(null, {
+                  query: vi.fn((sql) => {
+                    return {};
+                  }),
+                  execute: vi.fn((sql) => {
+                    return {};
+                  })
+                });
+              })
+            };
+          })
+        };
       })
     };
 
+    openapm = new OpenAPM();
     instrumentMySQL(mockMysql2);
   });
 
+  afterAll(async () => {
+    openapm.metricsServer?.close(() => {
+      console.log('Closing the metrics server');
+    });
+  });
+
   test('Connection', () => {
-    const conn = mockMysql2.createConnection();
-    expect(conn[symbols.WRAP_CONNECTION]).toBe(true);
+    mockConn = mockMysql2.createConnection();
+    expect(mockConn[symbols.WRAP_CONNECTION]).toBe(true);
   });
 
   test('Pool', () => {
-    const pool = mockMysql2.createPool();
-    expect(pool[symbols.WRAP_POOL]).toBe(true);
+    mockPool = mockMysql2.createPool();
+    expect(mockPool[symbols.WRAP_POOL]).toBe(true);
+  });
+
+  test('Pool - getConnection - callback', () => {
+    let conn;
+    mockPool.getConnection((err, connection) => {
+      conn = connection;
+    });
+
+    expect(conn[symbols.WRAP_CONNECTION]).toBe(true);
   });
 
   test('Pool Cluster', () => {
-    const pool = mockMysql2.createPoolCluster();
-    expect(pool[symbols.WRAP_POOL_CLUSTER]).toBe(true);
+    mockPoolCluster = mockMysql2.createPoolCluster();
+    expect(mockPoolCluster[symbols.WRAP_POOL_CLUSTER]).toBe(true);
   });
 });
