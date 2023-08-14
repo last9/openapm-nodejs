@@ -65,3 +65,7 @@ export const getSanitizedPath = (pathname: string) => {
   );
   return sanitizedPath;
 };
+
+export const maskValuesInSQLQuery = (query: string) => {
+  return query.replace(/'[^']*'/g, `'$'`);
+};

@@ -9,12 +9,13 @@ import type {
   createPool,
   createPoolCluster
 } from 'mysql2';
+import { maskValuesInSQLQuery } from '../utils';
 
 ////// Constants ////////////////////////
 export const symbols = {
   WRAP_CONNECTION: Symbol('WRAP_CONNECTION'),
   WRAP_POOL: Symbol('WRAP_POOL'),
-  WRAP_GET_CONNECTION_CB: Symbol('WRAP_GET_CONNECTION_CB'),
+  WRAP_GET_CONNECTION: Symbol('WRAP_GET_CONNECTION'),
   WRAP_POOL_CLUSTER: Symbol('WRAP_POOL_CLUSTER'),
   WRAP_POOL_CLUSTER_OF: Symbol('WRAP_POOL_CLUSTER_OF'),
   WRAP_QUERYABLE_CB: Symbol('WRAP_QUERYABLE_CB')
@@ -39,7 +40,8 @@ function getConnectionConfig(config: any): ConnectionConfig {
 let histogram: Histogram;
 
 const registerResult = (result: Query, time: number, dbName: string) => {
-  histogram.labels(dbName, result.sql.substring(0, 100)).observe(time);
+  const maskedQuery = maskValuesInSQLQuery(result.sql);
+  histogram.labels(dbName, maskedQuery.substring(0, 100)).observe(time);
 };
 
 /**
@@ -143,10 +145,10 @@ export const wrapPoolGetConnection = (
     let callbackFn = args[args.length - 1];
     const getConnectionFnProto = Object.getPrototypeOf(getConnectionFn);
 
-    if (!getConnectionFnProto?.[symbols.WRAP_GET_CONNECTION_CB]) {
+    if (!getConnectionFnProto?.[symbols.WRAP_GET_CONNECTION]) {
       callbackFn = wrapPoolGetConnectionCB(callbackFn);
       args[args.length - 1] = callbackFn;
-      getConnectionFnProto[symbols.WRAP_GET_CONNECTION_CB] = true;
+      getConnectionFnProto[symbols.WRAP_GET_CONNECTION] = true;
     }
 
     return getConnectionFn.apply(this, args);
