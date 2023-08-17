@@ -110,26 +110,25 @@ export function interceptQueryable(
     ...args: Parameters<Connection['query'] | Connection['execute']>
   ) {
     const lastArgIndex = args.length - 1;
-    /**
-     * This means allow this only if the callback is passed otherwise send undefined.
-     */
-    if (
+    const dbName =
+      getConnectionConfig(connectionConfig as any).database ?? '[db-name]';
+    const query = maskValuesInSQLQuery(
+      typeof args[lastArgIndex] === 'string'
+        ? args[lastArgIndex]
+        : args[lastArgIndex].sql
+    ).substring(0, 100);
+    const hasCallback =
       typeof args[lastArgIndex] !== 'string' &&
-      typeof args[lastArgIndex] !== 'object'
-    ) {
-      args[lastArgIndex] = wrapQueryableCB(args[lastArgIndex], ctx);
-    } else {
-      args[1] = wrapQueryableCB(undefined, {
+      typeof args[lastArgIndex] !== 'object';
+
+    args[hasCallback ? lastArgIndex : 1] = wrapQueryableCB(
+      hasCallback ? args[lastArgIndex] : undefined,
+      {
         ...ctx,
-        database_name:
-          getConnectionConfig(connectionConfig as any).database ?? '[db-name]',
-        query: maskValuesInSQLQuery(
-          typeof args[lastArgIndex] === 'string'
-            ? args[lastArgIndex]
-            : args[lastArgIndex].sql
-        ).substring(0, 100)
-      });
-    }
+        database_name: dbName,
+        query
+      }
+    );
 
     return fn.apply(this, args) as ReturnType<Connection['query']>;
   };
