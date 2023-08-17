@@ -85,16 +85,13 @@ export function interceptQueryable(
     this: Connection['query'] | Connection['execute'],
     ...args: Parameters<Connection['query'] | Connection['execute']>
   ) {
-    const end = ctx.histogram.startTimer();
+    const end = ctx.histogram.startTimer({});
     const result = fn.apply(this, args) as ReturnType<Connection['query']>;
-    const time = end();
-
-    registerResult(
-      result,
-      time,
-      getConnectionConfig(connectionConfig as any).database ?? '[db-name]',
-      ctx
-    );
+    end({
+      database_name:
+        getConnectionConfig(connectionConfig as any).database ?? '[db-name]',
+      query: maskValuesInSQLQuery(result.sql).substring(0, 100)
+    });
 
     return result;
   };
