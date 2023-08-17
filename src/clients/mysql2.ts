@@ -4,6 +4,7 @@ import type {
   ConnectionConfig,
   Pool,
   PoolCluster,
+  PoolConnection,
   Query,
   createConnection,
   createPool,
@@ -13,6 +14,8 @@ import { maskValuesInSQLQuery } from '../utils';
 
 interface Context {
   histogram: Histogram;
+  database_name?: string;
+  query?: string;
 }
 
 ////// Constants ////////////////////////
@@ -41,14 +44,35 @@ function getConnectionConfig(config: any): ConnectionConfig {
 
 //////////////////////////////////////
 
-const registerResult = (
-  result: Query,
-  time: number,
-  dbName: string,
+const wrapQueryableCB = (
+  cb: Parameters<Connection['query']>['2'],
   ctx: Context
 ) => {
-  const maskedQuery = maskValuesInSQLQuery(result.sql);
-  ctx.histogram.labels(dbName, maskedQuery.substring(0, 100)).observe(time);
+  const end = ctx.histogram.startTimer({
+    database_name: ctx.database_name,
+    query: ctx.query
+  });
+
+  if (typeof cb === 'undefined') {
+    return function (
+      this: Parameters<Connection['query']>['2'],
+      ...args: Parameters<NonNullable<Parameters<Connection['query']>['2']>>
+    ) {
+      end();
+      return;
+    };
+  }
+
+  return function (
+    this: Parameters<Connection['query']>['2'],
+    ...args: Parameters<NonNullable<Parameters<Connection['query']>['2']>>
+  ) {
+    end({
+      database_name: ctx.database_name,
+      query: ctx.query
+    });
+    return cb.apply(this, args);
+  };
 };
 
 /**
@@ -85,15 +109,29 @@ export function interceptQueryable(
     this: Connection['query'] | Connection['execute'],
     ...args: Parameters<Connection['query'] | Connection['execute']>
   ) {
-    const end = ctx.histogram.startTimer({});
-    const result = fn.apply(this, args) as ReturnType<Connection['query']>;
-    end({
-      database_name:
-        getConnectionConfig(connectionConfig as any).database ?? '[db-name]',
-      query: maskValuesInSQLQuery(result.sql).substring(0, 100)
-    });
+    const lastArgIndex = args.length - 1;
+    /**
+     * This means allow this only if the callback is passed otherwise send undefined.
+     */
+    if (
+      typeof args[lastArgIndex] !== 'string' &&
+      typeof args[lastArgIndex] !== 'object'
+    ) {
+      args[lastArgIndex] = wrapQueryableCB(args[lastArgIndex], ctx);
+    } else {
+      args[1] = wrapQueryableCB(undefined, {
+        ...ctx,
+        database_name:
+          getConnectionConfig(connectionConfig as any).database ?? '[db-name]',
+        query: maskValuesInSQLQuery(
+          typeof args[lastArgIndex] === 'string'
+            ? args[lastArgIndex]
+            : args[lastArgIndex].sql
+        ).substring(0, 100)
+      });
+    }
 
-    return result;
+    return fn.apply(this, args) as ReturnType<Connection['query']>;
   };
 }
 
@@ -106,11 +144,14 @@ export function interceptQueryable(
  * @returns Returns wrapped connection
  */
 export const wrapConnection = (
-  connection: Connection,
+  connection: Connection | PoolConnection,
   ctx: {
     histogram: Histogram;
   }
-) => {
+): Connection | PoolConnection => {
+  if (!connection) {
+    return connection;
+  }
   // Get ProtoType for the connection
   const connectionProto = Object.getPrototypeOf(connection);
   if (!connectionProto?.[symbols.WRAP_CONNECTION]) {
@@ -146,7 +187,10 @@ export const wrapPoolGetConnectionCB = (
 ): Parameters<Pool['getConnection']>['0'] => {
   return function (this: Parameters<Pool['getConnection']>['0'], ...args) {
     const [_, conn] = args;
-    wrapConnection(conn, ctx);
+    if (typeof conn !== 'undefined') {
+      let wrappedConn = wrapConnection(conn, ctx);
+      args[1] = wrappedConn as PoolConnection;
+    }
     return cb.apply(this, args);
   };
 };
@@ -162,7 +206,10 @@ export const wrapPoolGetConnection = (
     let callbackFn = args[args.length - 1];
     const getConnectionFnProto = Object.getPrototypeOf(getConnectionFn);
 
-    if (!getConnectionFnProto?.[symbols.WRAP_GET_CONNECTION_CB]) {
+    if (
+      !getConnectionFnProto?.[symbols.WRAP_GET_CONNECTION_CB] &&
+      typeof args[args.length - 1] !== 'undefined'
+    ) {
       callbackFn = wrapPoolGetConnectionCB(callbackFn, ctx);
       args[args.length - 1] = callbackFn;
       getConnectionFnProto[symbols.WRAP_GET_CONNECTION_CB] = true;
@@ -231,6 +278,7 @@ export const wrapPool = (
     }
 
     poolProto.getConnection = wrapPoolGetConnection(pool['getConnection'], ctx);
+
     poolProto[symbols.WRAP_POOL] = true;
   }
 
@@ -285,6 +333,7 @@ export const instrumentMySQL = (mysql: {
     apply: (target, prop, args) => {
       const pool = Reflect.apply(target, prop, args);
       // Instrument Pool
+
       return wrapPool(pool, {
         histogram
       });
