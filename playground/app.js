@@ -12,11 +12,14 @@ const pool = mysql2.createPool(
 
 app.get('/result', (req, res) => {
   pool.getConnection((err, conn) => {
-    if (typeof conn !== 'undefined') {
-      conn.query({
+    conn.query(
+      {
         sql: 'SELECT SLEEP(RAND() * 10)'
-      });
-    }
+      },
+      (...args) => {
+        console.log(args);
+      }
+    );
   });
 
   res.status(200).json({});

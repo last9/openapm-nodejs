@@ -5,7 +5,6 @@ import type {
   Pool,
   PoolCluster,
   PoolConnection,
-  Query,
   createConnection,
   createPool,
   createPoolCluster
@@ -112,11 +111,11 @@ export function interceptQueryable(
     const lastArgIndex = args.length - 1;
     const dbName =
       getConnectionConfig(connectionConfig as any).database ?? '[db-name]';
+
     const query = maskValuesInSQLQuery(
-      typeof args[lastArgIndex] === 'string'
-        ? args[lastArgIndex]
-        : args[lastArgIndex].sql
+      typeof args[0] === 'string' ? args[0] : args[0].sql
     ).substring(0, 100);
+
     const hasCallback =
       typeof args[lastArgIndex] !== 'string' &&
       typeof args[lastArgIndex] !== 'object';
@@ -148,9 +147,6 @@ export const wrapConnection = (
     histogram: Histogram;
   }
 ): Connection | PoolConnection => {
-  if (!connection) {
-    return connection;
-  }
   // Get ProtoType for the connection
   const connectionProto = Object.getPrototypeOf(connection);
   if (!connectionProto?.[symbols.WRAP_CONNECTION]) {
@@ -185,12 +181,8 @@ export const wrapPoolGetConnectionCB = (
   ctx: Context
 ): Parameters<Pool['getConnection']>['0'] => {
   return function (this: Parameters<Pool['getConnection']>['0'], ...args) {
-    const [_, conn] = args;
-    if (typeof conn !== 'undefined') {
-      let wrappedConn = wrapConnection(conn, ctx);
-      args[1] = wrappedConn as PoolConnection;
-    }
-    return cb.apply(this, args);
+    const wrappedConn = wrapConnection(args[1], ctx) as PoolConnection;
+    return cb.apply(this, [args[0], wrappedConn]);
   };
 };
 
@@ -202,18 +194,14 @@ export const wrapPoolGetConnection = (
     this: Pool['getConnection'],
     ...args: Parameters<Pool['getConnection']>
   ) {
-    let callbackFn = args[args.length - 1];
     const getConnectionFnProto = Object.getPrototypeOf(getConnectionFn);
-
     if (
       !getConnectionFnProto?.[symbols.WRAP_GET_CONNECTION_CB] &&
-      typeof args[args.length - 1] !== 'undefined'
+      typeof args[0] !== 'undefined'
     ) {
-      callbackFn = wrapPoolGetConnectionCB(callbackFn, ctx);
-      args[args.length - 1] = callbackFn;
+      args[0] = wrapPoolGetConnectionCB(args[0], ctx);
       getConnectionFnProto[symbols.WRAP_GET_CONNECTION_CB] = true;
     }
-
     return getConnectionFn.apply(this, args);
   };
 };
