@@ -47,17 +47,17 @@ const wrapQueryableCB = (
   cb: Parameters<Connection['query']>['2'],
   ctx: Context
 ) => {
-  const end = ctx.histogram.startTimer({
-    database_name: ctx.database_name,
-    query: ctx.query
-  });
+  const end = ctx.histogram.startTimer({});
 
   if (typeof cb === 'undefined') {
     return function (
       this: Parameters<Connection['query']>['2'],
       ...args: Parameters<NonNullable<Parameters<Connection['query']>['2']>>
     ) {
-      end();
+      end({
+        database_name: ctx.database_name,
+        query: ctx.query
+      });
       return;
     };
   }

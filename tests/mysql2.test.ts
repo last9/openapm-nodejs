@@ -11,28 +11,28 @@ describe('mysql2', () => {
     mockMysql2 = {
       createConnection: vi.fn(() => {
         return {
-          query: vi.fn((sql) => {
+          query: vi.fn((sql, cb) => {
             return {};
           }),
-          execute: vi.fn((sql) => {
+          execute: vi.fn((sql, cb) => {
             return {};
           })
         };
       }),
       createPool: vi.fn(() => {
         return {
-          query: vi.fn((sql) => {
+          query: vi.fn((sql, cb) => {
             return {};
           }),
-          execute: vi.fn((sql) => {
+          execute: vi.fn((sql, cb) => {
             return {};
           }),
           getConnection: vi.fn((cb) => {
             cb(null, {
-              query: vi.fn((sql) => {
+              query: vi.fn((sql, cb) => {
                 return {};
               }),
-              execute: vi.fn((sql) => {
+              execute: vi.fn((sql, cb) => {
                 return {};
               })
             });
@@ -43,18 +43,18 @@ describe('mysql2', () => {
         return {
           of: vi.fn(() => {
             return {
-              query: vi.fn((sql) => {
+              query: vi.fn((sql, cb) => {
                 return {};
               }),
-              execute: vi.fn((sql) => {
+              execute: vi.fn((sql, cb) => {
                 return {};
               }),
               getConnection: vi.fn((cb) => {
                 cb(null, {
-                  query: vi.fn((sql) => {
+                  query: vi.fn((sql, cb) => {
                     return {};
                   }),
-                  execute: vi.fn((sql) => {
+                  execute: vi.fn((sql, cb) => {
                     return {};
                   })
                 });
