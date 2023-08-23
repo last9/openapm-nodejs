@@ -34,7 +34,7 @@ app.listen(3000)
 
 ### MySQL
 
-This currently supports instrumentation for all Node.js ORMs which are MySQL compatible.
+This currently supports instrumentation for all Node.js ORMs, which are [mysql2](https://www.npmjs.com/package/mysql2) compatible.
 
 Ensure to add this line of code before you initialize db `connection/pool/poolCluster`.
 
@@ -70,7 +70,7 @@ const openapm = new OpenAPM({
    ```
 
 6. `requestDurationHistogramConfig`: (Optional) Requests Duration histogram
-   configuration, same as
+   configuration, the same as
    [Histogram](https://github.com/siimon/prom-client#histogram) in
    `prom-client`. Defaults to
    ```js
@@ -84,7 +84,7 @@ const openapm = new OpenAPM({
 
 ## Setup locally
 
-Make sure you are in the express directory
+Make sure you are in the express directory.
 
 - Install packages
 
@@ -102,8 +102,8 @@ npm run build
 ```
 
 # Grafana Dashboard View
-1. Import [this](./APM%20Dashboard-1692794131428.json) dashboard into your grafana
-2. Select your datasource
+1. Import [this](./APM%20Dashboard-1692794131428.json) dashboard into your Grafana
+2. Select your data source
 3. Save the dashboard
 
 ![APM Dashboard](images/apm-dashboard-1.png)
