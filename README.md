@@ -102,7 +102,7 @@ npm run build
 ```
 
 # Grafana Dashboard View
-1. Import [this](./APM%20Dashboard-1692794131428.json) dashboard into your Grafana
+1. Import [this](./APM-Grafana-Dashboard.json) dashboard into your Grafana
 2. Select your data source
 3. Save the dashboard
 
