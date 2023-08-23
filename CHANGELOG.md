@@ -10,18 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Auto instrumentation of Rate and Duration metrics for MySQL DB
-- CHANGELOG
-- Preconfigured grafana dashboard json that you can import
-
-### Changed
-
-- README contains setup instructions for MySQL DB Metrics and Express R.E.D metrics
-- Screenshots of grafana dashboards with slow queries panel
+- Preconfigured Grafana dashboard JSON that can be imported directly
 
 ## [0.1.1] - 2023-07-26
 
 ### Added
 
-- Auto instrumentation of R.E.D (Rate, Errors & Duration) metrics for express.js
-- README contains setup instructions
-- Screenshots of grafana dashboard
+- Auto instrumentation of R.E.D (Rate, Errors & Duration) metrics for Express.js
