@@ -41,6 +41,8 @@ export interface OpenAPMOptions {
   requestDurationHistogramConfig?: HistogramConfiguration<string>;
 }
 
+export type SupportedModules = 'mysql';
+
 const packageJson = getPackageJson();
 
 export class OpenAPM {
@@ -146,15 +148,22 @@ export class OpenAPM {
     }
   );
 
-  public instrument(moduleName: 'mysql2') {
-    try {
-      const mysql2 = require('mysql2');
-      instrumentMySQL(mysql2);
-    } catch (error) {
-      throw new Error(
-        "OpenAPM couldn't import the mysql2 package, please install it."
-      );
+  public instrument(moduleName: SupportedModules) {
+    if (moduleName === 'mysql') {
+      try {
+        const mysql2 = require('mysql2');
+        instrumentMySQL(mysql2);
+      } catch (error) {
+        throw new Error(
+          "OpenAPM couldn't import the mysql2 package, please install it."
+        );
+      }
+      return;
     }
+
+    throw new Error(
+      `OpenAPM doesn't support the following module: ${moduleName}`
+    );
   }
 }
 
