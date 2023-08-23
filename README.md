@@ -39,7 +39,7 @@ This currently supports instrumentation for all Node.js ORMs, which are [mysql2]
 Ensure to add this line of code before you initialize db `connection/pool/poolCluster`.
 
 ```js
-openapm.instrument('mysql2');
+openapm.instrument('mysql');
 ```
 
 ## Options
