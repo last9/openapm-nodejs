@@ -11,8 +11,9 @@
     "declarationMap": true,
     "emitDeclarationOnly": false,
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
-    "types": ["node"],
+    "types": ["node", "mysql2"],
     "outDir": "dist"
   },
   "include": ["src/**/*"],

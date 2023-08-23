@@ -1,5 +1,5 @@
 import * as os from 'os';
-import express from 'express';
+import http from 'http';
 import ResponseTime from 'response-time';
 import promClient from 'prom-client';
 
@@ -9,7 +9,7 @@ import type {
   Histogram,
   HistogramConfiguration
 } from 'prom-client';
-import type { Express, Request } from 'express';
+import type { Request } from 'express';
 import type { IncomingMessage, ServerResponse, Server } from 'http';
 
 import {
@@ -18,6 +18,7 @@ import {
   getParsedPathname,
   getSanitizedPath
 } from './utils';
+import { instrumentMySQL } from './clients/mysql2';
 
 export interface OpenAPMOptions {
   /** Route where the metrics will be exposed
@@ -40,6 +41,8 @@ export interface OpenAPMOptions {
   requestDurationHistogramConfig?: HistogramConfiguration<string>;
 }
 
+export type SupportedModules = 'mysql';
+
 const packageJson = getPackageJson();
 
 export class OpenAPM {
@@ -50,7 +53,6 @@ export class OpenAPM {
   private requestsCounterConfig: CounterConfiguration<string>;
   private requestDurationHistogramConfig: HistogramConfiguration<string>;
 
-  private metricsApp: Express;
   private requestsCounter?: Counter;
   private requestsDurationHistogram?: Histogram;
   public metricsServer?: Server;
@@ -73,9 +75,6 @@ export class OpenAPM {
         labelNames: ['path', 'method', 'status'],
         buckets: promClient.exponentialBuckets(0.25, 1.5, 31)
       };
-
-    // Create the metrics app using express
-    this.metricsApp = express();
 
     this.initiateMetricsRoute();
     this.initiatePromClient();
@@ -104,16 +103,22 @@ export class OpenAPM {
   };
 
   private initiateMetricsRoute = () => {
-    // Adding merics route handler
-    this.metricsApp.get(this.path, async (req, res) => {
-      // Adding Content-Type header
-      res.set('Content-Type', promClient.register.contentType);
-      return res.end(await promClient.register.metrics());
+    // Creating native http server
+    this.metricsServer = http.createServer(async (req, res) => {
+      // Sanitize the path
+      const path = getSanitizedPath(req.url ?? '/');
+      if (path === this.path && req.method === 'GET') {
+        res.setHeader('Content-Type', promClient.register.contentType);
+        return res.end(await promClient.register.metrics());
+      } else {
+        res.statusCode = 404;
+        res.end('404 Not found');
+      }
     });
 
-    // Listening metrics server
-    this.metricsServer = this.metricsApp.listen(this.metricsServerPort, () => {
-      console.log(`Metrics server started at port ${this.metricsServerPort}`);
+    // Start listening at the given port defaults to 9097
+    this.metricsServer?.listen(this.metricsServerPort, () => {
+      console.log(`Metrics server running at ${this.metricsServerPort}`);
     });
   };
 
@@ -142,6 +147,24 @@ export class OpenAPM {
         .observe(time);
     }
   );
+
+  public instrument(moduleName: SupportedModules) {
+    if (moduleName === 'mysql') {
+      try {
+        const mysql2 = require('mysql2');
+        instrumentMySQL(mysql2);
+      } catch (error) {
+        throw new Error(
+          "OpenAPM couldn't import the mysql2 package, please install it."
+        );
+      }
+      return;
+    }
+
+    throw new Error(
+      `OpenAPM doesn't support the following module: ${moduleName}`
+    );
+  }
 }
 
 export default OpenAPM;

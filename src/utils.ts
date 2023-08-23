@@ -65,3 +65,19 @@ export const getSanitizedPath = (pathname: string) => {
   );
   return sanitizedPath;
 };
+
+export const maskValuesInSQLQuery = (query: string) => {
+  let counter = 1;
+  // Regular expression to match strings and numbers.
+  // Assumes strings are wrapped with single quotes.
+  const regex = /'[^']*'|(\b\d+\b)/g;
+
+  return query.replace(regex, (match) => {
+    // If the match is a number or a string, replace it.
+    if (match.match(/^\d+$/) || match.startsWith("'")) {
+      return `$${counter++}`;
+    }
+    // If not, return the original match (should not occur with the current regex)
+    return match;
+  });
+};
