@@ -34,7 +34,9 @@ app.listen(3000)
 
 ### MySQL
 
-To instrument the [mysql2](https://www.npmjs.com/package/mysql2) package, you just need to add one line of code. Make sure to add this line of code before you initialize db connection/pool/poolCluster.
+This currently supports instrumentation for all Node.js ORMs which are MySQL compatible.
+
+Ensure to add this line of code before you initialize db `connection/pool/poolCluster`.
 
 ```js
 openapm.instrument('mysql2');
@@ -100,9 +102,15 @@ npm run build
 ```
 
 # Grafana Dashboard View
+1. Import [this](./APM%20Dashboard-1692794131428.json) dashboard into your grafana
+2. Select your datasource
+3. Save the dashboard
 
 ![APM Dashboard](images/apm-dashboard-1.png)
 ![APM Dashboard](images/apm-dashboard-2.png)
+![APM Dashboard](images/apm-dashboard-3.png)
+
+
 
 # About Last9
 
