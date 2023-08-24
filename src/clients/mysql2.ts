@@ -56,7 +56,8 @@ const wrapQueryableCB = (
     ) {
       end({
         database_name: ctx.database_name,
-        query: ctx.query
+        query: ctx.query,
+        status: args[0] === null ? 'success' : 'failure'
       });
       return;
     };
@@ -68,7 +69,8 @@ const wrapQueryableCB = (
   ) {
     end({
       database_name: ctx.database_name,
-      query: ctx.query
+      query: ctx.query,
+      status: args[0] === null ? 'success' : 'failure'
     });
     return cb.apply(this, args);
   };
@@ -294,7 +296,7 @@ export const instrumentMySQL = (mysql: {
   const histogram = new promClient.Histogram({
     name: 'db_requests_duration_milliseconds',
     help: 'Duration of DB transactions in milliseconds',
-    labelNames: ['database_name', 'query'],
+    labelNames: ['database_name', 'query', 'status'],
     buckets: promClient.exponentialBuckets(0.25, 1.5, 31)
   });
 
