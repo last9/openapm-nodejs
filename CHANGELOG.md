@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Error metrics for DB queries where status label with values of `success` and `failure` 
+- Track the success or failure of database queries with the `status` label in the `db_requests_duration_milliseconds` metric. Supported values - `success` and `failure`.
 
 ## [0.2.1] - 2023-08-23
 
