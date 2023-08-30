@@ -5,6 +5,7 @@ import { test, expect, describe, beforeAll, afterAll } from 'vitest';
 
 import OpenAPM from '../src/OpenAPM';
 import { addRoutes, sendTestRequests } from './utils';
+import prom from 'prom-client';
 
 describe('REDMiddleware', () => {
   const NUMBER_OF_REQUESTS = 300;
@@ -21,6 +22,7 @@ describe('REDMiddleware', () => {
     app.listen(3002);
 
     const out = await sendTestRequests(app, NUMBER_OF_REQUESTS);
+    // @ts-ignore
     const res = await request(openapm.metricsServer).get('/metrics');
     parsedData = parsePrometheusTextFormat(res.text);
   });
@@ -28,6 +30,7 @@ describe('REDMiddleware', () => {
   afterAll(async () => {
     openapm.metricsServer?.close(() => {
       console.log('Closing the metrics server');
+      prom.register.clear();
     });
   });
 
