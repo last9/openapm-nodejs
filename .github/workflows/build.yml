@@ -15,7 +15,9 @@ jobs:
           node-version: 16.20.0
       - uses: shogo82148/actions-setup-mysql@v1.23.0
         with:
-          mysql-version: "8.0"
+          mysql-version: '8.0'
+          my-cnf: |
+            user: openapm
 
       - name: Test MySQL Connection
         run: mysql -h localhost -u root -e 'SELECT version()'
@@ -45,6 +47,7 @@ jobs:
           DB_HOST: localhost
           DB_PORT: 3306
           DB_NAME: test_db
+          DB_USER: root
           CI: true
         run: npm run test
 

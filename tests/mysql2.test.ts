@@ -4,6 +4,8 @@ import { instrumentMySQL, symbols } from '../src/clients/mysql2';
 import OpenAPM from '../src/OpenAPM';
 import prom, { Histogram } from 'prom-client';
 
+const connectionUri = `mysql://root@$localhost:3306/test_db`;
+
 const sendTestRequest = async (conn: Connection | Pool, query: string) => {
   return new Promise((resolve) => {
     conn.query(query, () => {
@@ -12,20 +14,35 @@ const sendTestRequest = async (conn: Connection | Pool, query: string) => {
   });
 };
 
+const performUpMigration = async (conn: Connection) => {
+  return new Promise((resolve, reject) => {
+    conn.query(
+      'CREATE TABLE users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255));',
+      () => {
+        resolve(true);
+      }
+    );
+  });
+};
+
+const performDownMigration = (conn: Connection) => {
+  return new Promise((resolve, reject) => {
+    conn.query('DROP TABLE users;', () => {
+      resolve(true);
+    });
+  });
+};
+
 const promisifyCreateConnection = async (): Promise<Connection> => {
   return new Promise((resolve) => {
-    const conn = mysql2.createConnection(
-      'mysql://express-app:password@127.0.0.1/express'
-    );
+    const conn = mysql2.createConnection(connectionUri);
     resolve(conn);
   });
 };
 
 const promisifyCreatePool = async (): Promise<Pool> => {
   return new Promise((resolve) => {
-    const pool = mysql2.createPool(
-      'mysql://express-app:password@127.0.0.1/express'
-    );
+    const pool = mysql2.createPool(connectionUri);
     resolve(pool);
   });
 };
@@ -47,11 +64,14 @@ describe('mysql2', () => {
     conn = await promisifyCreateConnection();
     pool = await promisifyCreatePool();
     poolCluster = await promisifyCreatePoolCluster();
+
+    await performUpMigration(conn);
   });
 
-  afterAll(() => {
-    prom.register.clear();
+  afterAll(async () => {
+    await performDownMigration(conn);
     conn.end();
+    prom.register.clear();
     openapm.metricsServer?.close(() => {
       console.log('Metrics server closing');
     });
@@ -73,7 +93,7 @@ describe('mysql2', () => {
     expect(
       // @ts-ignore
       histogram.hashMap[
-        'database_name:express,query:SELECT * FROM USERS;,status:success'
+        'database_name:test_db,query:SELECT * FROM USERS;,status:success'
       ]?.count
     ).toBe(NUMBER_OF_REQUESTS);
   });
@@ -90,7 +110,7 @@ describe('mysql2', () => {
     expect(
       // @ts-ignore
       histogram.hashMap[
-        'database_name:express,query:SELECT * FROM USER;,status:failure'
+        'database_name:test_db,query:SELECT * FROM USER;,status:failure'
       ]?.count
     ).toBe(NUMBER_OF_REQUESTS);
   });
@@ -111,7 +131,7 @@ describe('mysql2', () => {
     expect(
       // @ts-ignore
       histogram.hashMap[
-        'database_name:express,query:SELECT * FROM USERS;,status:success'
+        'database_name:test_db,query:SELECT * FROM USERS;,status:success'
       ]?.count
     ).toBe(NUMBER_OF_REQUESTS * 2);
   });
@@ -128,7 +148,7 @@ describe('mysql2', () => {
     expect(
       // @ts-ignore
       histogram.hashMap[
-        'database_name:express,query:SELECT * FROM USERS;,status:success'
+        'database_name:test_db,query:SELECT * FROM USERS;,status:success'
       ]?.count
     ).toBe(NUMBER_OF_REQUESTS * 2);
   });
