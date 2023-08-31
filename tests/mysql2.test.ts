@@ -4,7 +4,7 @@ import { instrumentMySQL, symbols } from '../src/clients/mysql2';
 import OpenAPM from '../src/OpenAPM';
 import prom, { Histogram } from 'prom-client';
 
-const connectionUri = `mysql://root@$localhost:3306/test_db`;
+const connectionUri = `mysql://root@localhost:3306/test_db`;
 
 const sendTestRequest = async (conn: Connection | Pool, query: string) => {
   return new Promise((resolve) => {
