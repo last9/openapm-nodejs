@@ -20,6 +20,9 @@ jobs:
       - name: Test MySQL Connection
         run: mysql -h localhost -u root -e 'SELECT version()'
 
+      - name: Create test DB
+        run: mysql -h localhost -u root -e 'CREATE DATABASE test_db;'
+
       - name: 🛎 Checkout
         uses: actions/checkout@v3
 
