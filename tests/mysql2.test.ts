@@ -79,7 +79,7 @@ describe('mysql2', () => {
   test('Connection - query success?', async () => {
     const NUMBER_OF_REQUESTS = 5;
     for (let i = 0; i < NUMBER_OF_REQUESTS; i++) {
-      await sendTestRequest(conn, 'SELECT * FROM USERS;');
+      await sendTestRequest(conn, 'SELECT * FROM users;');
     }
     const histogram = prom.register.getSingleMetric(
       'db_requests_duration_milliseconds'
@@ -88,7 +88,7 @@ describe('mysql2', () => {
     expect(
       // @ts-ignore
       histogram.hashMap[
-        'database_name:test_db,query:SELECT * FROM USERS;,status:success'
+        'database_name:test_db,query:SELECT * FROM users;,status:success'
       ]?.count
     ).toBe(NUMBER_OF_REQUESTS);
   });
@@ -96,7 +96,7 @@ describe('mysql2', () => {
   test('Connection - query failure?', async () => {
     const NUMBER_OF_REQUESTS = 5;
     for (let i = 0; i < NUMBER_OF_REQUESTS; i++) {
-      await sendTestRequest(conn, 'SELECT * FROM USER;');
+      await sendTestRequest(conn, 'SELECT * FROM user;');
     }
     const histogram = prom.register.getSingleMetric(
       'db_requests_duration_milliseconds'
@@ -107,7 +107,7 @@ describe('mysql2', () => {
     expect(
       // @ts-ignore
       histogram.hashMap[
-        'database_name:test_db,query:SELECT * FROM USER;,status:failure'
+        'database_name:test_db,query:SELECT * FROM user;,status:failure'
       ]?.count
     ).toBe(NUMBER_OF_REQUESTS);
   });
@@ -119,7 +119,7 @@ describe('mysql2', () => {
   test('Pool - query success?', async () => {
     const NUMBER_OF_REQUESTS = 5;
     for (let i = 0; i < NUMBER_OF_REQUESTS; i++) {
-      await sendTestRequest(pool, 'SELECT * FROM USERS;');
+      await sendTestRequest(pool, 'SELECT * FROM users;');
     }
     const histogram = prom.register.getSingleMetric(
       'db_requests_duration_milliseconds'
@@ -128,7 +128,7 @@ describe('mysql2', () => {
     expect(
       // @ts-ignore
       histogram.hashMap[
-        'database_name:test_db,query:SELECT * FROM USERS;,status:success'
+        'database_name:test_db,query:SELECT * FROM users;,status:success'
       ]?.count
     ).toBe(NUMBER_OF_REQUESTS * 2);
   });
@@ -136,7 +136,7 @@ describe('mysql2', () => {
   test('Pool - query failure?', async () => {
     const NUMBER_OF_REQUESTS = 5;
     for (let i = 0; i < NUMBER_OF_REQUESTS; i++) {
-      await sendTestRequest(pool, 'SELECT * FROM USER;');
+      await sendTestRequest(pool, 'SELECT * FROM user;');
     }
     const histogram = prom.register.getSingleMetric(
       'db_requests_duration_milliseconds'
@@ -145,7 +145,7 @@ describe('mysql2', () => {
     expect(
       // @ts-ignore
       histogram.hashMap[
-        'database_name:test_db,query:SELECT * FROM USERS;,status:success'
+        'database_name:test_db,query:SELECT * FROM users;,status:success'
       ]?.count
     ).toBe(NUMBER_OF_REQUESTS * 2);
   });
