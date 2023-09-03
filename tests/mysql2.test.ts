@@ -1,10 +1,9 @@
 import { describe, beforeAll, expect, test, vi, afterAll } from 'vitest';
 import mysql2, { Connection, Pool, PoolCluster, PoolNamespace } from 'mysql2';
 import { instrumentMySQL, symbols } from '../src/clients/mysql2';
-import OpenAPM from '../src/OpenAPM';
 import prom, { Histogram } from 'prom-client';
 
-const connectionUri = `mysql://root@localhost:3306/test_db`;
+const connectionUri = `mysql://openapm:openapm@localhost:3306/test_db`;
 
 const sendTestRequest = async (conn: Connection | Pool, query: string) => {
   return new Promise((resolve) => {
@@ -55,10 +54,9 @@ const promisifyCreatePoolCluster = async (): Promise<PoolCluster> => {
 };
 
 describe('mysql2', () => {
-  let openapm: OpenAPM, conn: Connection, pool: Pool, poolCluster: PoolCluster;
+  let conn: Connection, pool: Pool, poolCluster: PoolCluster;
 
   beforeAll(async () => {
-    openapm = new OpenAPM();
     instrumentMySQL(mysql2);
 
     conn = await promisifyCreateConnection();
@@ -72,9 +70,6 @@ describe('mysql2', () => {
     await performDownMigration(conn);
     conn.end();
     prom.register.clear();
-    openapm.metricsServer?.close(() => {
-      console.log('Metrics server closing');
-    });
   });
 
   test('Connection - Wrapped?', () => {

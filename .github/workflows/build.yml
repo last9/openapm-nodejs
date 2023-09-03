@@ -16,12 +16,15 @@ jobs:
       - uses: shogo82148/actions-setup-mysql@v1.23.0
         with:
           mysql-version: '8.0'
+          my-cnf: |
+            user=openapm
+            password=openapm
 
       - name: Test MySQL Connection
         run: mysql -h localhost -u root -e 'SELECT version()'
 
       - name: Create test DB
-        run: mysql -h localhost -u root -e 'CREATE DATABASE test_db;'
+        run: mysql -h localhost -u root -e 'CREATE DATABASE test_db'
 
       - name: 🛎 Checkout
         uses: actions/checkout@v3
