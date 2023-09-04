@@ -10,13 +10,21 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
-      - name: 🛎 Checkout
-        uses: actions/checkout@v3
-
-      - name: ⬢ Use Node.js
-        uses: actions/setup-node@v2
+      - uses: actions/setup-node@v2
         with:
           node-version: 16.20.0
+      - uses: shogo82148/actions-setup-mysql@v1.23.0
+        with:
+          mysql-version: '8.0'
+
+      - name: Test MySQL Connection
+        run: mysql -h localhost -u root -e 'SELECT version()'
+
+      - name: Create test DB
+        run: mysql -h localhost -u root -e 'CREATE DATABASE test_db'
+
+      - name: 🛎 Checkout
+        uses: actions/checkout@v3
 
       - name: 🧶 Get NPM cache
         uses: actions/cache@v3
@@ -36,6 +44,12 @@ jobs:
         run: npm install --frozen-lockfile
 
       - name: 🧪 Test
+        env:
+          DB_HOST: localhost
+          DB_PORT: 3306
+          DB_NAME: test_db
+          DB_USER: root
+          CI: true
         run: npm run test
 
       - name: 👷 Build

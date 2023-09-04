@@ -7,7 +7,6 @@ export const addRoutes = (app: Express) => {
 
   router.get('/:id', (req, res) => {
     const { id } = req.params;
-    console.log(id);
     res.status(200).send(id);
   });
   app.use('/api/router/', router);
@@ -29,11 +28,13 @@ export const sendTestRequests = async (app: Express, num: number) => {
   for (let index = 0; index < num; index++) {
     const id = getRandomId();
     try {
+      // @ts-ignore
       const res = await request(app).get(`/api/${id}`);
     } catch (err) {
       throw new Error(err);
     }
   }
   const id = getRandomId();
+  // @ts-ignore
   await request(app).get(`/api/router/${id}`);
 };
