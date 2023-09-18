@@ -3,7 +3,7 @@ var { OpenAPM } = require('../dist/cjs/index.js');
 var mysql2 = require('mysql2');
 const openapm = new OpenAPM();
 
-openapm.instrument('mysql2');
+openapm.instrument('mysql');
 
 const app = express();
 const pool = mysql2.createPool(

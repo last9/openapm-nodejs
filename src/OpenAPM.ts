@@ -102,6 +102,13 @@ export class OpenAPM {
     );
   };
 
+  private gracefullyShutdownMetricsServer = () => {
+    this.metricsServer?.close(() => {
+      promClient.register.clear();
+      process.exit(0);
+    });
+  };
+
   private initiateMetricsRoute = () => {
     // Creating native http server
     this.metricsServer = http.createServer(async (req, res) => {
@@ -119,6 +126,7 @@ export class OpenAPM {
     // Start listening at the given port defaults to 9097
     this.metricsServer?.listen(this.metricsServerPort, () => {
       console.log(`Metrics server running at ${this.metricsServerPort}`);
+      process.on('SIGINT', this.gracefullyShutdownMetricsServer);
     });
   };
 
