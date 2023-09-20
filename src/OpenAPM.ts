@@ -103,9 +103,16 @@ export class OpenAPM {
   };
 
   private gracefullyShutdownMetricsServer = () => {
-    this.metricsServer?.close(() => {
+    this.metricsServer?.close((err) => {
       promClient.register.clear();
-      process.exit(0);
+      console.log('Shutting down metrics server.');
+      if (err) {
+        console.error('Error while shutting down the metrics server:', err);
+        process.exit(1);
+      } else {
+        console.log('Server shut down gracefully.');
+        process.exit(0);
+      }
     });
   };
 
@@ -126,8 +133,9 @@ export class OpenAPM {
     // Start listening at the given port defaults to 9097
     this.metricsServer?.listen(this.metricsServerPort, () => {
       console.log(`Metrics server running at ${this.metricsServerPort}`);
-      process.on('SIGINT', this.gracefullyShutdownMetricsServer);
     });
+    process.on('SIGINT', this.gracefullyShutdownMetricsServer);
+    process.on('SIGTERM', this.gracefullyShutdownMetricsServer);
   };
 
   // Middleware Function, which is essentially the response-time middleware with a callback that captures the
