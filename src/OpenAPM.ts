@@ -40,9 +40,18 @@ export interface OpenAPMOptions {
   /** Accepts configuration for Prometheus Histogram */
   requestDurationHistogramConfig?: HistogramConfiguration<string>;
   /** Extract Tenant via URL path, subdomain, header */
-  extractTenantVia?: string;
+  extractTenantVia?: Array<string>;
   /** Tenant label: Which URL path param should be extracted as tenant */
   tenantLabel?: string;
+  /** Extract labels from URL path, subdomain, header */
+  extractLabels?: Record<
+    string,
+    {
+      from: Array<'params'>;
+      key: string;
+      mask: string;
+    }
+  >;
 }
 
 export type SupportedModules = 'mysql';
@@ -56,11 +65,18 @@ export class OpenAPM {
   private defaultLabels?: Record<string, string>;
   private requestsCounterConfig: CounterConfiguration<string>;
   private requestDurationHistogramConfig: HistogramConfiguration<string>;
-  private extractTenantVia?: string;
+  private extractTenantVia?: Array<string>;
   private tenantLabel?: string;
-
   private requestsCounter?: Counter;
   private requestsDurationHistogram?: Histogram;
+  private extractLabels?: Record<
+    string,
+    {
+      from: Array<'params'>;
+      key: string;
+      mask: string;
+    }
+  >;
   public metricsServer?: Server;
 
   constructor(options?: OpenAPMOptions) {
@@ -72,18 +88,30 @@ export class OpenAPM {
     this.requestsCounterConfig = options?.requestsCounterConfig ?? {
       name: 'http_requests_total',
       help: 'Total number of requests',
-      labelNames: ['path', 'method', 'status', 'tenant']
+      labelNames: [
+        'path',
+        'method',
+        'status',
+        ...(options?.extractLabels ? Object.keys(options?.extractLabels) : [])
+      ]
     };
     this.requestDurationHistogramConfig =
       options?.requestDurationHistogramConfig || {
         name: 'http_requests_duration_milliseconds',
         help: 'Duration of HTTP requests in milliseconds',
-        labelNames: ['path', 'method', 'status', 'tenant'],
+        labelNames: [
+          'path',
+          'method',
+          'status',
+          ...(options?.extractLabels ? Object.keys(options?.extractLabels) : [])
+        ],
         buckets: promClient.exponentialBuckets(0.25, 1.5, 31)
       };
 
+    this.extractLabels = options?.extractLabels ?? {};
+
     // Default via URL as of now. Later add support for subdomain and request header
-    this.extractTenantVia = 'url';
+    this.extractTenantVia = options?.extractTenantVia ?? ['url'];
     this.tenantLabel = options?.tenantLabel;
 
     this.initiateMetricsRoute();
@@ -148,6 +176,42 @@ export class OpenAPM {
     process.on('SIGTERM', this.gracefullyShutdownMetricsServer);
   };
 
+  private parseLabelsFromParams = (
+    pathname: string,
+    params: Request['params']
+  ) => {
+    const labels = {} as Record<string, string | undefined>;
+    const configs = Object.keys(this.extractLabels ?? {})
+      .filter((labelName) => {
+        return this.extractLabels?.[labelName].from.includes('params');
+      })
+      .map((labelName) => {
+        return {
+          ...this.extractLabels?.[labelName],
+          label: labelName
+        };
+      });
+
+    let parsedPathname = pathname;
+    for (const item of configs) {
+      if (item.key && item.label && item.from) {
+        const labelValue = params[item.key];
+        const escapedLabelValue = labelValue.replace(
+          /[.*+?^${}()|[\]\\]/g,
+          '\\$&'
+        );
+        const regex = new RegExp(escapedLabelValue, 'g');
+        parsedPathname = getParsedPathname(parsedPathname, [regex], item.mask);
+        labels[item.label] = escapedLabelValue;
+      }
+    }
+
+    return {
+      pathname: parsedPathname,
+      labels
+    };
+  };
+
   // Middleware Function, which is essentially the response-time middleware with a callback that captures the
   // metrics
   public REDMiddleware = ResponseTime(
@@ -157,34 +221,29 @@ export class OpenAPM {
       time: number
     ) => {
       const sanitizePathname = getSanitizedPath(req.originalUrl ?? '/');
-      const parsedPathname = getParsedPathname(sanitizePathname, undefined);
-      console.log(this.tenantLabel);
-      // TODO: Cover for undefined, if tenant label does not exist in the request params, don't emit it.
-      const tenant = this.tenantLabel ? req.params[this.tenantLabel] : '';
-      let path = parsedPathname;
+      let parsedPathname = getParsedPathname(sanitizePathname, undefined);
+      const { pathname, labels: parsedLabelsFromPathname } =
+        this.parseLabelsFromParams(parsedPathname, req.params);
 
-      // Replace original tenant name in the URL with the mask now
-      if (tenant !== '') {
-        // Escape special characters in the tenant string for regex
-        let escapedTenant = tenant.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        let regex = new RegExp('/' + escapedTenant + '/', 'g');
-        path = parsedPathname.replace(regex, '/:' + this.tenantLabel + '/');
-      }
-
-      // TODO: Add support for replacing original tenant valeu from URL with tenantLabel
-      const labels = {
-        path: path,
+      const labels: Record<string, string> = {
+        path: pathname,
         status: res.statusCode.toString(),
         method: req.method as string,
-        tenant: tenant
+        ...parsedLabelsFromPathname
       };
 
-      this.requestsCounter
-        ?.labels(labels.path, labels.method, labels.status, labels.tenant)
-        .inc();
-      this.requestsDurationHistogram
-        ?.labels(labels.path, labels.method, labels.status, labels.tenant)
-        .observe(time);
+      const requestsCounterArgs = this.requestsCounterConfig.labelNames?.map(
+        (labelName) => {
+          return labels[labelName] ?? '';
+        }
+      );
+
+      if (requestsCounterArgs) {
+        this.requestsCounter?.labels(...requestsCounterArgs).inc();
+        this.requestsDurationHistogram
+          ?.labels(...requestsCounterArgs)
+          .observe(time);
+      }
     }
   );
 

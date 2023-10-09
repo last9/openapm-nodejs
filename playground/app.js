@@ -1,7 +1,15 @@
 var express = require('express');
 var { OpenAPM } = require('../dist/cjs/index.js');
 var mysql2 = require('mysql2');
-const openapm = new OpenAPM({ tenantLabel: 'org' });
+const openapm = new OpenAPM({
+  extractLabels: {
+    tenant: {
+      from: ['params'],
+      key: 'org',
+      mask: ':org'
+    }
+  }
+});
 
 openapm.instrument('mysql');
 
