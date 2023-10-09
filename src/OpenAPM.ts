@@ -102,6 +102,20 @@ export class OpenAPM {
     );
   };
 
+  private gracefullyShutdownMetricsServer = () => {
+    this.metricsServer?.close((err) => {
+      promClient.register.clear();
+      console.log('Shutting down metrics server.');
+      if (err) {
+        console.error('Error while shutting down the metrics server:', err);
+        process.exit(1);
+      } else {
+        console.log('Metrics server shut down gracefully.');
+        process.exit(0);
+      }
+    });
+  };
+
   private initiateMetricsRoute = () => {
     // Creating native http server
     this.metricsServer = http.createServer(async (req, res) => {
@@ -120,6 +134,8 @@ export class OpenAPM {
     this.metricsServer?.listen(this.metricsServerPort, () => {
       console.log(`Metrics server running at ${this.metricsServerPort}`);
     });
+    process.on('SIGINT', this.gracefullyShutdownMetricsServer);
+    process.on('SIGTERM', this.gracefullyShutdownMetricsServer);
   };
 
   // Middleware Function, which is essentially the response-time middleware with a callback that captures the
