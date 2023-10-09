@@ -161,10 +161,19 @@ export class OpenAPM {
       console.log(this.tenantLabel);
       // TODO: Cover for undefined, if tenant label does not exist in the request params, don't emit it.
       const tenant = this.tenantLabel ? req.params[this.tenantLabel] : '';
+      let path = parsedPathname;
+
+      // Replace original tenant name in the URL with the mask now
+      if (tenant !== '') {
+        // Escape special characters in the tenant string for regex
+        let escapedTenant = tenant.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        let regex = new RegExp('/' + escapedTenant + '/', 'g');
+        path = parsedPathname.replace(regex, '/:' + this.tenantLabel + '/');
+      }
 
       // TODO: Add support for replacing original tenant valeu from URL with tenantLabel
       const labels = {
-        path: parsedPathname,
+        path: path,
         status: res.statusCode.toString(),
         method: req.method as string,
         tenant: tenant
