@@ -45,11 +45,7 @@ export interface OpenAPMOptions {
   requestsCounterConfig?: CounterConfiguration<string>;
   /** Accepts configuration for Prometheus Histogram */
   requestDurationHistogramConfig?: HistogramConfiguration<string>;
-  /** Extract Tenant via URL path, subdomain, header */
-  extractTenantVia?: Array<string>;
-  /** Tenant label: Which URL path param should be extracted as tenant */
-  tenantLabel?: string;
-  /** Extract labels from URL path, subdomain, header */
+  /** Extract labels from URL params, subdomain, header */
   extractLabels?: Record<string, ExtractFromParams>;
 }
 
@@ -64,8 +60,6 @@ export class OpenAPM {
   private defaultLabels?: Record<string, string>;
   private requestsCounterConfig: CounterConfiguration<string>;
   private requestDurationHistogramConfig: HistogramConfiguration<string>;
-  private extractTenantVia?: Array<string>;
-  private tenantLabel?: string;
   private requestsCounter?: Counter;
   private requestsDurationHistogram?: Histogram;
   private extractLabels?: Record<string, ExtractFromParams>;
@@ -101,10 +95,6 @@ export class OpenAPM {
       };
 
     this.extractLabels = options?.extractLabels ?? {};
-
-    // Default via URL as of now. Later add support for subdomain and request header
-    this.extractTenantVia = options?.extractTenantVia ?? ['url'];
-    this.tenantLabel = options?.tenantLabel;
 
     this.initiateMetricsRoute();
     this.initiatePromClient();
