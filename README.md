@@ -81,6 +81,20 @@ const openapm = new OpenAPM({
         buckets: promClient.exponentialBuckets(0.25, 1.5, 31),
       }
    ```
+7. `extractLabels`: (Optional) Extract labels from URL params (WIP: Headers, Subdomain)
+   ```js
+   // To extract from the URL params
+   {
+      ...
+      extractLabels: {
+         tenant: { // Here 'tenant' is the label name
+            from : 'params',
+            key: 'org' // Which key to extract from the params
+            mask: ':org' // Replacement string
+         }
+      }
+   }
+   ```
 
 ## Setup locally
 
@@ -102,6 +116,7 @@ npm run build
 ```
 
 # Grafana Dashboard View
+
 1. Import [this](./APM-Grafana-Dashboard.json) dashboard into your Grafana
 2. Select your data source
 3. Save the dashboard
@@ -109,8 +124,6 @@ npm run build
 ![APM Dashboard](images/apm-dashboard-1.png)
 ![APM Dashboard](images/apm-dashboard-2.png)
 ![APM Dashboard](images/apm-dashboard-3.png)
-
-
 
 # About Last9
 
