@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add `extractLabels` to the options to extract the labels from the URL params
+- Add `extractLabels` to the options to extract any labels from the URL params such as a tenant or org name allowing support for multi-tenant monitoring.
+- 
 - Gracefully shutdown metrics server
 
 ## [0.2.2] - 2023-08-28
