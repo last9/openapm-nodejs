@@ -20,6 +20,12 @@ import {
 } from './utils';
 import { instrumentMySQL } from './clients/mysql2';
 
+export type ExtractFromParams = {
+  from: 'params';
+  key: string;
+  mask: string;
+};
+
 export interface OpenAPMOptions {
   /** Route where the metrics will be exposed
    * @default "/metrics"
@@ -44,14 +50,7 @@ export interface OpenAPMOptions {
   /** Tenant label: Which URL path param should be extracted as tenant */
   tenantLabel?: string;
   /** Extract labels from URL path, subdomain, header */
-  extractLabels?: Record<
-    string,
-    {
-      from: Array<'params'>;
-      key: string;
-      mask: string;
-    }
-  >;
+  extractLabels?: Record<string, ExtractFromParams>;
 }
 
 export type SupportedModules = 'mysql';
@@ -69,14 +68,7 @@ export class OpenAPM {
   private tenantLabel?: string;
   private requestsCounter?: Counter;
   private requestsDurationHistogram?: Histogram;
-  private extractLabels?: Record<
-    string,
-    {
-      from: Array<'params'>;
-      key: string;
-      mask: string;
-    }
-  >;
+  private extractLabels?: Record<string, ExtractFromParams>;
   public metricsServer?: Server;
 
   constructor(options?: OpenAPMOptions) {
@@ -103,7 +95,7 @@ export class OpenAPM {
           'path',
           'method',
           'status',
-          ...(options?.extractLabels ? Object.keys(options?.extractLabels) : [])
+          ...(options?.extractLabels ? Object.keys(options?.extractLabels) : []) // If the extractLabels exists add the labels to the label set
         ],
         buckets: promClient.exponentialBuckets(0.25, 1.5, 31)
       };
@@ -181,9 +173,10 @@ export class OpenAPM {
     params: Request['params']
   ) => {
     const labels = {} as Record<string, string | undefined>;
+    // Get the label configs and filter it only for param values
     const configs = Object.keys(this.extractLabels ?? {})
       .filter((labelName) => {
-        return this.extractLabels?.[labelName].from.includes('params');
+        return this.extractLabels?.[labelName].from === 'params';
       })
       .map((labelName) => {
         return {
@@ -201,7 +194,10 @@ export class OpenAPM {
           '\\$&'
         );
         const regex = new RegExp(escapedLabelValue, 'g');
+        // Replace the param with a generic mask that user has specified
         parsedPathname = getParsedPathname(parsedPathname, [regex], item.mask);
+
+        // Add the value to the label set
         labels[item.label] = escapedLabelValue;
       }
     }
@@ -222,6 +218,7 @@ export class OpenAPM {
     ) => {
       const sanitizePathname = getSanitizedPath(req.originalUrl ?? '/');
       let parsedPathname = getParsedPathname(sanitizePathname, undefined);
+      // Extract labels from the request params
       const { pathname, labels: parsedLabelsFromPathname } =
         this.parseLabelsFromParams(parsedPathname, req.params);
 
@@ -232,6 +229,7 @@ export class OpenAPM {
         ...parsedLabelsFromPathname
       };
 
+      // Create an array of arguments in the same sequence as label names
       const requestsCounterArgs = this.requestsCounterConfig.labelNames?.map(
         (labelName) => {
           return labels[labelName] ?? '';

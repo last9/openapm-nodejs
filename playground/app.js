@@ -4,7 +4,7 @@ var mysql2 = require('mysql2');
 const openapm = new OpenAPM({
   extractLabels: {
     tenant: {
-      from: ['params'],
+      from: 'params',
       key: 'org',
       mask: ':org'
     }
