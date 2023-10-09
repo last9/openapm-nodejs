@@ -110,7 +110,7 @@ export class OpenAPM {
         console.error('Error while shutting down the metrics server:', err);
         process.exit(1);
       } else {
-        console.log('Server shut down gracefully.');
+        console.log('Metrics server shut down gracefully.');
         process.exit(0);
       }
     });
