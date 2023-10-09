@@ -39,6 +39,8 @@ export interface OpenAPMOptions {
   requestsCounterConfig?: CounterConfiguration<string>;
   /** Accepts configuration for Prometheus Histogram */
   requestDurationHistogramConfig?: HistogramConfiguration<string>;
+  /** Tenant label: Which URL path param should be extracted as tenant */
+  tenantLabel?: string;
 }
 
 export type SupportedModules = 'mysql';
@@ -52,6 +54,7 @@ export class OpenAPM {
   private defaultLabels?: Record<string, string>;
   private requestsCounterConfig: CounterConfiguration<string>;
   private requestDurationHistogramConfig: HistogramConfiguration<string>;
+  private tenantLabel?: string;
 
   private requestsCounter?: Counter;
   private requestsDurationHistogram?: Histogram;
@@ -66,15 +69,17 @@ export class OpenAPM {
     this.requestsCounterConfig = options?.requestsCounterConfig ?? {
       name: 'http_requests_total',
       help: 'Total number of requests',
-      labelNames: ['path', 'method', 'status']
+      labelNames: ['path', 'method', 'status', 'tenant']
     };
     this.requestDurationHistogramConfig =
       options?.requestDurationHistogramConfig || {
         name: 'http_requests_duration_milliseconds',
         help: 'Duration of HTTP requests in milliseconds',
-        labelNames: ['path', 'method', 'status'],
+        labelNames: ['path', 'method', 'status', 'tenant'],
         buckets: promClient.exponentialBuckets(0.25, 1.5, 31)
       };
+
+    this.tenantLabel = options?.tenantLabel;
 
     this.initiateMetricsRoute();
     this.initiatePromClient();
@@ -148,18 +153,23 @@ export class OpenAPM {
     ) => {
       const sanitizePathname = getSanitizedPath(req.originalUrl ?? '/');
       const parsedPathname = getParsedPathname(sanitizePathname, undefined);
+      console.log(this.tenantLabel);
+      // TODO: Cover for undefined, if tenant label does not exist in the request params, don't emit it.
+      const tenant = this.tenantLabel ? req.params[this.tenantLabel] : '';
 
+      // TODO: Add support for replacing original tenant valeu from URL with tenantLabel
       const labels = {
         path: parsedPathname,
         status: res.statusCode.toString(),
-        method: req.method as string
+        method: req.method as string,
+        tenant: tenant
       };
 
       this.requestsCounter
-        ?.labels(labels.path, labels.method, labels.status)
+        ?.labels(labels.path, labels.method, labels.status, labels.tenant)
         .inc();
       this.requestsDurationHistogram
-        ?.labels(labels.path, labels.method, labels.status)
+        ?.labels(labels.path, labels.method, labels.status, labels.tenant)
         .observe(time);
     }
   );

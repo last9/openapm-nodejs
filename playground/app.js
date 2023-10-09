@@ -1,11 +1,14 @@
 var express = require('express');
 var { OpenAPM } = require('../dist/cjs/index.js');
 var mysql2 = require('mysql2');
-const openapm = new OpenAPM();
+const openapm = new OpenAPM({ tenantLabel: 'org' });
 
 openapm.instrument('mysql');
 
 const app = express();
+app.use(openapm.REDMiddleware);
+
+// This doesn't work by default. Need instructions to make this work.
 const pool = mysql2.createPool(
   `mysql://express-app:password@127.0.0.1/express`
 );
@@ -21,6 +24,12 @@ app.get('/result', (req, res) => {
       }
     );
   });
+
+  res.status(200).json({});
+});
+
+app.get('/organizations/:org/users', (req, res) => {
+  console.log(req.params['org']);
 
   res.status(200).json({});
 });
