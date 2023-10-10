@@ -166,7 +166,11 @@ export class OpenAPM {
     // Get the label configs and filter it only for param values
     const configs = Object.keys(this.extractLabels ?? {})
       .filter((labelName) => {
-        return this.extractLabels?.[labelName].from === 'params';
+        // Filter out the configs that doesn't have "from" key set to "params", also check if the required param actually exists
+        return (
+          this.extractLabels?.[labelName].from === 'params' &&
+          typeof params[this.extractLabels[labelName].key] === 'string'
+        );
       })
       .map((labelName) => {
         return {
@@ -179,21 +183,19 @@ export class OpenAPM {
     for (const item of configs) {
       if (item.key && item.label && item.from) {
         const labelValue = params[item.key];
-        if (typeof labelValue === 'string') {
-          const escapedLabelValue = labelValue.replace(
-            /[.*+?^${}()|[\]\\]/g,
-            '\\$&'
-          );
-          const regex = new RegExp(escapedLabelValue, 'g');
+        const escapedLabelValue = labelValue.replace(
+          /[.*+?^${}()|[\]\\]/g,
+          '\\$&'
+        );
+        const regex = new RegExp(escapedLabelValue, 'g');
 
-          // Replace the param with a generic mask that user has specified
-          if (item.mask) {
-            parsedPathname = parsedPathname.replace(regex, item.mask);
-          }
-
-          // Add the value to the label set
-          labels[item.label] = escapedLabelValue;
+        // Replace the param with a generic mask that user has specified
+        if (item.mask) {
+          parsedPathname = parsedPathname.replace(regex, item.mask);
         }
+
+        // Add the value to the label set
+        labels[item.label] = escapedLabelValue;
       }
     }
 
