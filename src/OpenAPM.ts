@@ -20,6 +20,12 @@ import {
 } from './utils';
 import { instrumentMySQL } from './clients/mysql2';
 
+export type ExtractFromParams = {
+  from: 'params';
+  key: string;
+  mask: string;
+};
+
 export interface OpenAPMOptions {
   /** Route where the metrics will be exposed
    * @default "/metrics"
@@ -39,6 +45,8 @@ export interface OpenAPMOptions {
   requestsCounterConfig?: CounterConfiguration<string>;
   /** Accepts configuration for Prometheus Histogram */
   requestDurationHistogramConfig?: HistogramConfiguration<string>;
+  /** Extract labels from URL params, subdomain, header */
+  extractLabels?: Record<string, ExtractFromParams>;
 }
 
 export type SupportedModules = 'mysql';
@@ -52,9 +60,9 @@ export class OpenAPM {
   private defaultLabels?: Record<string, string>;
   private requestsCounterConfig: CounterConfiguration<string>;
   private requestDurationHistogramConfig: HistogramConfiguration<string>;
-
   private requestsCounter?: Counter;
   private requestsDurationHistogram?: Histogram;
+  private extractLabels?: Record<string, ExtractFromParams>;
   public metricsServer?: Server;
 
   constructor(options?: OpenAPMOptions) {
@@ -66,15 +74,27 @@ export class OpenAPM {
     this.requestsCounterConfig = options?.requestsCounterConfig ?? {
       name: 'http_requests_total',
       help: 'Total number of requests',
-      labelNames: ['path', 'method', 'status']
+      labelNames: [
+        'path',
+        'method',
+        'status',
+        ...(options?.extractLabels ? Object.keys(options?.extractLabels) : [])
+      ]
     };
     this.requestDurationHistogramConfig =
       options?.requestDurationHistogramConfig || {
         name: 'http_requests_duration_milliseconds',
         help: 'Duration of HTTP requests in milliseconds',
-        labelNames: ['path', 'method', 'status'],
+        labelNames: [
+          'path',
+          'method',
+          'status',
+          ...(options?.extractLabels ? Object.keys(options?.extractLabels) : []) // If the extractLabels exists add the labels to the label set
+        ],
         buckets: promClient.exponentialBuckets(0.25, 1.5, 31)
       };
+
+    this.extractLabels = options?.extractLabels ?? {};
 
     this.initiateMetricsRoute();
     this.initiatePromClient();
@@ -138,6 +158,53 @@ export class OpenAPM {
     process.on('SIGTERM', this.gracefullyShutdownMetricsServer);
   };
 
+  private parseLabelsFromParams = (
+    pathname: string,
+    params: Request['params']
+  ) => {
+    const labels = {} as Record<string, string | undefined>;
+    // Get the label configs and filter it only for param values
+    const configs = Object.keys(this.extractLabels ?? {})
+      .filter((labelName) => {
+        // Filter out the configs that doesn't have "from" key set to "params", also check if the required param actually exists
+        return (
+          this.extractLabels?.[labelName].from === 'params' &&
+          typeof params[this.extractLabels[labelName].key] === 'string'
+        );
+      })
+      .map((labelName) => {
+        return {
+          ...this.extractLabels?.[labelName],
+          label: labelName
+        };
+      });
+
+    let parsedPathname = pathname;
+    for (const item of configs) {
+      if (item.key && item.label && item.from) {
+        const labelValue = params[item.key];
+        const escapedLabelValue = labelValue.replace(
+          /[.*+?^${}()|[\]\\]/g,
+          '\\$&'
+        );
+        const regex = new RegExp(escapedLabelValue, 'g');
+
+        // Replace the param with a generic mask that user has specified
+        if (item.mask) {
+          parsedPathname = parsedPathname.replace(regex, item.mask);
+        }
+
+        // Add the value to the label set
+        labels[item.label] = escapedLabelValue;
+      }
+    }
+
+    return {
+      pathname: parsedPathname,
+      labels
+    };
+  };
+
   // Middleware Function, which is essentially the response-time middleware with a callback that captures the
   // metrics
   public REDMiddleware = ResponseTime(
@@ -146,21 +213,32 @@ export class OpenAPM {
       res: ServerResponse<IncomingMessage>,
       time: number
     ) => {
-      const sanitizePathname = getSanitizedPath(req.originalUrl ?? '/');
-      const parsedPathname = getParsedPathname(sanitizePathname, undefined);
+      const sanitizedPathname = getSanitizedPath(req.originalUrl ?? '/');
+      const { pathname, labels: parsedLabelsFromPathname } =
+        this.parseLabelsFromParams(sanitizedPathname, req.params);
+      const parsedPathname = getParsedPathname(pathname, undefined);
+      // Extract labels from the request params
 
-      const labels = {
+      const labels: Record<string, string> = {
         path: parsedPathname,
         status: res.statusCode.toString(),
-        method: req.method as string
+        method: req.method as string,
+        ...parsedLabelsFromPathname
       };
 
-      this.requestsCounter
-        ?.labels(labels.path, labels.method, labels.status)
-        .inc();
-      this.requestsDurationHistogram
-        ?.labels(labels.path, labels.method, labels.status)
-        .observe(time);
+      // Create an array of arguments in the same sequence as label names
+      const requestsCounterArgs = this.requestsCounterConfig.labelNames?.map(
+        (labelName) => {
+          return labels[labelName] ?? '';
+        }
+      );
+
+      if (requestsCounterArgs) {
+        this.requestsCounter?.labels(...requestsCounterArgs).inc();
+        this.requestsDurationHistogram
+          ?.labels(...requestsCounterArgs)
+          .observe(time);
+      }
     }
   );
 
