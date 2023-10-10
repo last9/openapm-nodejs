@@ -1,6 +1,12 @@
+/**
+ * Make sure to build the library before you run the app
+ * Also, comment out the things that you are not using. For example, you can comment out the mysql code if you are
+ * not testing or developing for the same
+ *  */
 var express = require('express');
 var { OpenAPM } = require('../dist/cjs/index.js');
 var mysql2 = require('mysql2');
+
 const openapm = new OpenAPM({
   extractLabels: {
     tenant: {
@@ -16,9 +22,8 @@ openapm.instrument('mysql');
 const app = express();
 app.use(openapm.REDMiddleware);
 
-// This doesn't work by default. Need instructions to make this work.
 const pool = mysql2.createPool(
-  `mysql://express-app:password@127.0.0.1/express`
+  `mysql://express-app:password@127.0.0.1/express` //  If this throws an error, Change the db url to the one you're running on your machine locally or the testing instance you might have hosted.
 );
 
 app.get('/result', (req, res) => {
