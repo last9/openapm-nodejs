@@ -179,16 +179,21 @@ export class OpenAPM {
     for (const item of configs) {
       if (item.key && item.label && item.from) {
         const labelValue = params[item.key];
-        const escapedLabelValue = labelValue.replace(
-          /[.*+?^${}()|[\]\\]/g,
-          '\\$&'
-        );
-        const regex = new RegExp(escapedLabelValue, 'g');
-        // Replace the param with a generic mask that user has specified
-        parsedPathname = getParsedPathname(parsedPathname, [regex], item.mask);
+        if (typeof labelValue === 'string') {
+          const escapedLabelValue = labelValue.replace(
+            /[.*+?^${}()|[\]\\]/g,
+            '\\$&'
+          );
+          const regex = new RegExp(escapedLabelValue, 'g');
 
-        // Add the value to the label set
-        labels[item.label] = escapedLabelValue;
+          // Replace the param with a generic mask that user has specified
+          if (item.mask) {
+            parsedPathname = parsedPathname.replace(regex, item.mask);
+          }
+
+          // Add the value to the label set
+          labels[item.label] = escapedLabelValue;
+        }
       }
     }
 
@@ -206,14 +211,14 @@ export class OpenAPM {
       res: ServerResponse<IncomingMessage>,
       time: number
     ) => {
-      const sanitizePathname = getSanitizedPath(req.originalUrl ?? '/');
-      let parsedPathname = getParsedPathname(sanitizePathname, undefined);
-      // Extract labels from the request params
+      const sanitizedPathname = getSanitizedPath(req.originalUrl ?? '/');
       const { pathname, labels: parsedLabelsFromPathname } =
-        this.parseLabelsFromParams(parsedPathname, req.params);
+        this.parseLabelsFromParams(sanitizedPathname, req.params);
+      const parsedPathname = getParsedPathname(pathname, undefined);
+      // Extract labels from the request params
 
       const labels: Record<string, string> = {
-        path: pathname,
+        path: parsedPathname,
         status: res.statusCode.toString(),
         method: req.method as string,
         ...parsedLabelsFromPathname
