@@ -14,7 +14,8 @@ const openapm = new OpenAPM({
       key: 'org',
       mask: ':org'
     }
-  }
+  },
+  customPathsToMask: [/\b\d+(?:,\d+)*\b/gm]
 });
 
 openapm.instrument('mysql');
@@ -44,6 +45,10 @@ app.get('/result', (req, res) => {
 app.get('/organizations/:org/users', (req, res) => {
   console.log(req.params['org']);
 
+  res.status(200).json({});
+});
+
+app.get('/cancel/:ids', (req, res) => {
   res.status(200).json({});
 });
 
