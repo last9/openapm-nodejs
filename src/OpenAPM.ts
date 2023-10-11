@@ -219,13 +219,13 @@ export class OpenAPM {
       time: number
     ) => {
       const sanitizedPathname = getSanitizedPath(req.originalUrl ?? '/');
+      // Extract labels from the request params
       const { pathname, labels: parsedLabelsFromPathname } =
         this.parseLabelsFromParams(sanitizedPathname, req.params);
       const parsedPathname = getParsedPathname(
         pathname,
         this.customPathsToMask
       );
-      // Extract labels from the request params
 
       const labels: Record<string, string> = {
         path: parsedPathname,
