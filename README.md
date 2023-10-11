@@ -95,6 +95,13 @@ const openapm = new OpenAPM({
       }
    }
    ```
+8. `customPathsToMask`: (Optional) Provide extra masks to mask the URL pathnames. Checkout [url-value-parser's](https://www.npmjs.com/package/url-value-parser) extraMasks option to know more.
+   ```js
+      {
+         ...,
+         customPathsToMask: [/\b\d+(?:,\d+)*\b/gm] // Accepts an array of Regex
+      }
+   ```
 
 ## Setup locally
 
