@@ -47,6 +47,8 @@ export interface OpenAPMOptions {
   requestDurationHistogramConfig?: HistogramConfiguration<string>;
   /** Extract labels from URL params, subdomain, header */
   extractLabels?: Record<string, ExtractFromParams>;
+  /** Provide extra masks to mask the URL pathnames  */
+  customPathsToMask?: Array<RegExp>;
 }
 
 export type SupportedModules = 'mysql';
@@ -63,6 +65,8 @@ export class OpenAPM {
   private requestsCounter?: Counter;
   private requestsDurationHistogram?: Histogram;
   private extractLabels?: Record<string, ExtractFromParams>;
+  private customPathsToMask?: Array<RegExp>;
+
   public metricsServer?: Server;
 
   constructor(options?: OpenAPMOptions) {
@@ -95,6 +99,7 @@ export class OpenAPM {
       };
 
     this.extractLabels = options?.extractLabels ?? {};
+    this.customPathsToMask = options?.customPathsToMask;
 
     this.initiateMetricsRoute();
     this.initiatePromClient();
@@ -214,10 +219,13 @@ export class OpenAPM {
       time: number
     ) => {
       const sanitizedPathname = getSanitizedPath(req.originalUrl ?? '/');
+      // Extract labels from the request params
       const { pathname, labels: parsedLabelsFromPathname } =
         this.parseLabelsFromParams(sanitizedPathname, req.params);
-      const parsedPathname = getParsedPathname(pathname, undefined);
-      // Extract labels from the request params
+      const parsedPathname = getParsedPathname(
+        pathname,
+        this.customPathsToMask
+      );
 
       const labels: Record<string, string> = {
         path: parsedPathname,
