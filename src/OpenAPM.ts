@@ -19,6 +19,7 @@ import {
   getSanitizedPath
 } from './utils';
 import { instrumentMySQL } from './clients/mysql2';
+import { instrumentNest } from './clients/nestjs';
 
 export type ExtractFromParams = {
   from: 'params';
@@ -266,7 +267,7 @@ export class OpenAPM {
     if (moduleName === 'nestjs') {
       try {
         const core = require('@nestjs/core');
-        instrumentMySQL(core);
+        instrumentNest(core);
       } catch (error) {
         throw new Error(
           "OpenAPM couldn't import the @nestjs/core package, please install it."
