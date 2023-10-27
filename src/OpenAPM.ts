@@ -51,7 +51,7 @@ export interface OpenAPMOptions {
   customPathsToMask?: Array<RegExp>;
 }
 
-export type SupportedModules = 'mysql';
+export type SupportedModules = 'mysql' | 'nestjs';
 
 const packageJson = getPackageJson();
 
@@ -258,6 +258,18 @@ export class OpenAPM {
       } catch (error) {
         throw new Error(
           "OpenAPM couldn't import the mysql2 package, please install it."
+        );
+      }
+      return;
+    }
+
+    if (moduleName === 'nestjs') {
+      try {
+        const core = require('@nestjs/core');
+        instrumentMySQL(core);
+      } catch (error) {
+        throw new Error(
+          "OpenAPM couldn't import the @nestjs/core package, please install it."
         );
       }
       return;
