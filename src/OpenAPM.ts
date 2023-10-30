@@ -19,7 +19,7 @@ import {
   getSanitizedPath
 } from './utils';
 import { instrumentMySQL } from './clients/mysql2';
-import { instrumentNest } from './clients/nestjs';
+import { instrumentNestRouterExecutionContext } from './clients/nestjs';
 
 export type ExtractFromParams = {
   from: 'params';
@@ -266,8 +266,11 @@ export class OpenAPM {
 
     if (moduleName === 'nestjs') {
       try {
-        const core = require('@nestjs/core');
-        instrumentNest(core);
+        const routerExecutionContext = require('@next/core/router/router-execution-context.js');
+        instrumentNestRouterExecutionContext(
+          routerExecutionContext,
+          this.REDMiddleware
+        );
       } catch (error) {
         throw new Error(
           "OpenAPM couldn't import the @nestjs/core package, please install it."

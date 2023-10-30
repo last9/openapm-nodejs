@@ -23,6 +23,14 @@ export const symbols = {
   UNWRAP: Symbol('UNWRAP') // Symbol pointing to a function that undoes the wrap, restoring the original function or property.
 };
 
+export function isWrapped<
+  T extends Record<string | number | symbol, any>,
+  K extends keyof T
+>(nodule: T, name: K) {
+  const original = nodule?.[name];
+  return original.hasOwnProperty(symbols.WRAPPED);
+}
+
 /**
  * @description Wraps a property (typically a function) of a given object (nodule) with a provided wrapper function.
  *
