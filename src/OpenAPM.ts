@@ -273,6 +273,7 @@ export class OpenAPM {
           this.REDMiddleware
         );
       } catch (error) {
+        console.error(error);
         throw new Error(
           "OpenAPM couldn't import the @nestjs/core package, please install it."
         );
