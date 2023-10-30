@@ -1,5 +1,4 @@
 import type { NestFactoryStatic } from '@nestjs/core/nest-factory';
-// import type { RouterExecutionContext } from '@nestjs/core/router/router-execution-context';
 import { isWrapped, wrap } from '../shimmer';
 
 export const instrumentNestFactory = (
