@@ -19,7 +19,10 @@ import {
   getSanitizedPath
 } from './utils';
 import { instrumentMySQL } from './clients/mysql2';
-import { instrumentNestRouterExecutionContext } from './clients/nestjs';
+import {
+  instrumentNestFactory
+  // instrumentNestRouterExecutionContext
+} from './clients/nestjs';
 
 export type ExtractFromParams = {
   from: 'params';
@@ -267,11 +270,13 @@ export class OpenAPM {
 
     if (moduleName === 'nestjs') {
       try {
-        const routerExecutionContext = require('@nestjs/core/router/router-execution-context.js');
-        instrumentNestRouterExecutionContext(
-          routerExecutionContext,
-          this.REDMiddleware
-        );
+        const { NestFactory } = require('@nestjs/core');
+        // const routerExecutionContext = require('@nestjs/core/router/router-execution-context.js');
+        // instrumentNestRouterExecutionContext(
+        //   routerExecutionContext,
+        //   this.REDMiddleware
+        // );
+        instrumentNestFactory(NestFactory, this.REDMiddleware);
       } catch (error) {
         console.error(error);
         throw new Error(
