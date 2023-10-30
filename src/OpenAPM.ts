@@ -257,6 +257,7 @@ export class OpenAPM {
         const mysql2 = require('mysql2');
         instrumentMySQL(mysql2);
       } catch (error) {
+        console.error(error);
         throw new Error(
           "OpenAPM couldn't import the mysql2 package, please install it."
         );
@@ -266,7 +267,7 @@ export class OpenAPM {
 
     if (moduleName === 'nestjs') {
       try {
-        const routerExecutionContext = require('@next/core/router/router-execution-context.js');
+        const routerExecutionContext = require('@nestjs/core/router/router-execution-context.js');
         instrumentNestRouterExecutionContext(
           routerExecutionContext,
           this.REDMiddleware
