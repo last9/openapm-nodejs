@@ -19,10 +19,7 @@ import {
   getSanitizedPath
 } from './utils';
 import { instrumentMySQL } from './clients/mysql2';
-import {
-  instrumentNestFactory
-  // instrumentNestRouterExecutionContext
-} from './clients/nestjs';
+import { instrumentNestFactory } from './clients/nestjs';
 
 export type ExtractFromParams = {
   from: 'params';
@@ -214,9 +211,11 @@ export class OpenAPM {
     };
   };
 
-  // Middleware Function, which is essentially the response-time middleware with a callback that captures the
-  // metrics
-  public REDMiddleware = ResponseTime(
+  /**
+   * Middleware Function, which is essentially the response-time middleware with a callback that captures the
+   * metrics
+   */
+  private _REDMiddleware = ResponseTime(
     (
       req: IncomingMessage & Request,
       res: ServerResponse<IncomingMessage>,
@@ -254,6 +253,13 @@ export class OpenAPM {
     }
   );
 
+  /**
+   * Middleware Function, which is essentially the response-time middleware with a callback that captures the
+   * metrics
+   * @deprecated
+   */
+  public REDMiddleware = this._REDMiddleware;
+
   public instrument(moduleName: SupportedModules) {
     if (moduleName === 'mysql') {
       try {
@@ -271,12 +277,7 @@ export class OpenAPM {
     if (moduleName === 'nestjs') {
       try {
         const { NestFactory } = require('@nestjs/core');
-        // const routerExecutionContext = require('@nestjs/core/router/router-execution-context.js');
-        // instrumentNestRouterExecutionContext(
-        //   routerExecutionContext,
-        //   this.REDMiddleware
-        // );
-        instrumentNestFactory(NestFactory, this.REDMiddleware);
+        instrumentNestFactory(NestFactory, this._REDMiddleware);
       } catch (error) {
         console.error(error);
         throw new Error(

@@ -26,26 +26,3 @@ export const instrumentNestFactory = (
     );
   }
 };
-
-// export const instrumentNestRouterExecutionContext = (
-//   routerExecutionContext: typeof RouterExecutionContext,
-//   redMiddleware: Function
-// ) => {
-//   if (!isWrapped(routerExecutionContext.prototype, 'create')) {
-//     wrap(
-//       routerExecutionContext.prototype,
-//       'create',
-//       function (original: typeof routerExecutionContext.prototype.create) {
-//         return function (
-//           this: typeof routerExecutionContext.prototype.create,
-//           ...args
-//         ) {
-//           const handler = original.apply(this, args);
-//           return function (this: typeof handler, req, res, next) {
-//             return handler.apply(this, [req, res, next]);
-//           } as ReturnType<typeof routerExecutionContext.prototype.create>;
-//         };
-//       }
-//     );
-//   }
-// };
