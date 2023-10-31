@@ -50,6 +50,8 @@ export interface OpenAPMOptions {
   extractLabels?: Record<string, ExtractFromParams>;
   /** Provide extra masks to mask the URL pathnames  */
   customPathsToMask?: Array<RegExp>;
+  /** Skip mentioned labels */
+  skipLabels?: Array<string>;
 }
 
 export type SupportedModules = 'mysql' | 'nestjs';
@@ -67,6 +69,7 @@ export class OpenAPM {
   private requestsDurationHistogram?: Histogram;
   private extractLabels?: Record<string, ExtractFromParams>;
   private customPathsToMask?: Array<RegExp>;
+  private skipLabels?: Array<string>;
 
   public metricsServer?: Server;
 
@@ -101,20 +104,33 @@ export class OpenAPM {
 
     this.extractLabels = options?.extractLabels ?? {};
     this.customPathsToMask = options?.customPathsToMask;
+    this.skipLabels = options?.skipLabels;
 
     this.initiateMetricsRoute();
     this.initiatePromClient();
   }
 
-  private initiatePromClient = () => {
-    promClient.register.setDefaultLabels({
+  private getDefaultLabels = () => {
+    const defaultLabels = {
       environment: this.environment,
       program: packageJson.name,
       version: packageJson.version,
       host: os.hostname(),
       ip: getHostIpAddress(),
       ...this.defaultLabels
-    });
+    };
+
+    if (Array.isArray(this.skipLabels)) {
+      for (const label of this.skipLabels) {
+        Reflect.deleteProperty(defaultLabels, label);
+      }
+    }
+
+    return defaultLabels;
+  };
+
+  private initiatePromClient = () => {
+    promClient.register.setDefaultLabels(this.getDefaultLabels());
 
     promClient.collectDefaultMetrics({
       gcDurationBuckets: this.requestDurationHistogramConfig.buckets
