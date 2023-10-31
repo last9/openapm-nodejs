@@ -10,6 +10,7 @@ npm install --save @last9/openapm@latest
 
 1. [Express](#express)
 2. [MySQL](#mysql)
+3. [NestJS](#nestjs)
 
 ### Express
 
@@ -40,6 +41,14 @@ Ensure to add this line of code before you initialize db `connection/pool/poolCl
 
 ```js
 openapm.instrument('mysql');
+```
+
+### NestJS
+
+OpenAPM currently supports RED Metrics for NestJS v4 and above.
+
+```js
+openapm.instrument('nestjs')
 ```
 
 ## Options
@@ -102,6 +111,13 @@ const openapm = new OpenAPM({
          customPathsToMask: [/\b\d+(?:,\d+)*\b/gm] // Accepts an array of Regex
       }
    ```
+9. `skipLabels`: (Optional) Provide labels to skip from the default labels
+```js
+{
+  ...
+  skipLabels: ['environment', 'version']
+}
+```
 
 ## Setup locally
 
