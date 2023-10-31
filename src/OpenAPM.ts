@@ -256,7 +256,6 @@ export class OpenAPM {
   /**
    * Middleware Function, which is essentially the response-time middleware with a callback that captures the
    * metrics
-   * @deprecated
    */
   public REDMiddleware = this._REDMiddleware;
 
