@@ -111,11 +111,11 @@ const openapm = new OpenAPM({
          customPathsToMask: [/\b\d+(?:,\d+)*\b/gm] // Accepts an array of Regex
       }
    ```
-9. `skipLabels`: (Optional) Provide labels to skip from the default labels
+9. `excludeDefaultLabels`: (Optional) Provide labels to exclude from the default labels
 ```js
 {
   ...
-  skipLabels: ['environment', 'version']
+  excludeDefaultLabels: ['environment', 'version']
 }
 ```
 

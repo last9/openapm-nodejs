@@ -15,7 +15,8 @@ const openapm = new OpenAPM({
       mask: ':org'
     }
   },
-  customPathsToMask: [/\b\d+(?:,\d+)*\b/gm]
+  customPathsToMask: [/\b\d+(?:,\d+)*\b/gm],
+  excludeDefaultLabels: ['host', 'program']
 });
 
 openapm.instrument('mysql');

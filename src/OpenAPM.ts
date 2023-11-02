@@ -27,6 +27,13 @@ export type ExtractFromParams = {
   mask: string;
 };
 
+export type DefaultLabels =
+  | 'environment'
+  | 'program'
+  | 'ip'
+  | 'version'
+  | 'host';
+
 export interface OpenAPMOptions {
   /** Route where the metrics will be exposed
    * @default "/metrics"
@@ -51,7 +58,7 @@ export interface OpenAPMOptions {
   /** Provide extra masks to mask the URL pathnames  */
   customPathsToMask?: Array<RegExp>;
   /** Skip mentioned labels */
-  skipLabels?: Array<string>;
+  excludeDefaultLabels?: Array<DefaultLabels>;
 }
 
 export type SupportedModules = 'mysql' | 'nestjs';
@@ -69,7 +76,7 @@ export class OpenAPM {
   private requestsDurationHistogram?: Histogram;
   private extractLabels?: Record<string, ExtractFromParams>;
   private customPathsToMask?: Array<RegExp>;
-  private skipLabels?: Array<string>;
+  private excludeDefaultLabels?: Array<DefaultLabels>;
 
   public metricsServer?: Server;
 
@@ -104,7 +111,7 @@ export class OpenAPM {
 
     this.extractLabels = options?.extractLabels ?? {};
     this.customPathsToMask = options?.customPathsToMask;
-    this.skipLabels = options?.skipLabels;
+    this.excludeDefaultLabels = options?.excludeDefaultLabels;
 
     this.initiateMetricsRoute();
     this.initiatePromClient();
@@ -120,8 +127,8 @@ export class OpenAPM {
       ...this.defaultLabels
     };
 
-    if (Array.isArray(this.skipLabels)) {
-      for (const label of this.skipLabels) {
+    if (Array.isArray(this.excludeDefaultLabels)) {
+      for (const label of this.excludeDefaultLabels) {
         Reflect.deleteProperty(defaultLabels, label);
       }
     }
@@ -182,28 +189,31 @@ export class OpenAPM {
 
   private parseLabelsFromParams = (
     pathname: string,
-    params: Request['params']
+    params?: Request['params']
   ) => {
     const labels = {} as Record<string, string | undefined>;
-    // Get the label configs and filter it only for param values
-    const configs = Object.keys(this.extractLabels ?? {})
-      .filter((labelName) => {
-        // Filter out the configs that doesn't have "from" key set to "params", also check if the required param actually exists
-        return (
-          this.extractLabels?.[labelName].from === 'params' &&
-          typeof params[this.extractLabels[labelName].key] === 'string'
-        );
-      })
-      .map((labelName) => {
-        return {
-          ...this.extractLabels?.[labelName],
-          label: labelName
-        };
-      });
-
     let parsedPathname = pathname;
+    if (typeof params === 'undefined' || params === null) {
+      return {
+        pathname,
+        labels
+      };
+    }
+    // Get the label configs and filter it only for param values
+    const configs = Object.keys(this.extractLabels ?? {}).map((labelName) => {
+      return {
+        ...this.extractLabels?.[labelName],
+        label: labelName
+      };
+    });
+
     for (const item of configs) {
-      if (item.key && item.label && item.from) {
+      if (
+        item.key &&
+        item.label &&
+        item.from === 'params' &&
+        params?.[item.key]
+      ) {
         const labelValue = params[item.key];
         const escapedLabelValue = labelValue.replace(
           /[.*+?^${}()|[\]\\]/g,
