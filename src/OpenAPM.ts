@@ -19,12 +19,20 @@ import {
   getSanitizedPath
 } from './utils';
 import { instrumentMySQL } from './clients/mysql2';
+import { instrumentNestFactory } from './clients/nestjs';
 
 export type ExtractFromParams = {
   from: 'params';
   key: string;
   mask: string;
 };
+
+export type DefaultLabels =
+  | 'environment'
+  | 'program'
+  | 'ip'
+  | 'version'
+  | 'host';
 
 export interface OpenAPMOptions {
   /** Route where the metrics will be exposed
@@ -49,9 +57,11 @@ export interface OpenAPMOptions {
   extractLabels?: Record<string, ExtractFromParams>;
   /** Provide extra masks to mask the URL pathnames  */
   customPathsToMask?: Array<RegExp>;
+  /** Skip mentioned labels */
+  excludeDefaultLabels?: Array<DefaultLabels>;
 }
 
-export type SupportedModules = 'mysql';
+export type SupportedModules = 'mysql' | 'nestjs';
 
 const packageJson = getPackageJson();
 
@@ -66,6 +76,7 @@ export class OpenAPM {
   private requestsDurationHistogram?: Histogram;
   private extractLabels?: Record<string, ExtractFromParams>;
   private customPathsToMask?: Array<RegExp>;
+  private excludeDefaultLabels?: Array<DefaultLabels>;
 
   public metricsServer?: Server;
 
@@ -100,20 +111,33 @@ export class OpenAPM {
 
     this.extractLabels = options?.extractLabels ?? {};
     this.customPathsToMask = options?.customPathsToMask;
+    this.excludeDefaultLabels = options?.excludeDefaultLabels;
 
     this.initiateMetricsRoute();
     this.initiatePromClient();
   }
 
-  private initiatePromClient = () => {
-    promClient.register.setDefaultLabels({
+  private getDefaultLabels = () => {
+    const defaultLabels = {
       environment: this.environment,
       program: packageJson.name,
       version: packageJson.version,
       host: os.hostname(),
       ip: getHostIpAddress(),
       ...this.defaultLabels
-    });
+    };
+
+    if (Array.isArray(this.excludeDefaultLabels)) {
+      for (const label of this.excludeDefaultLabels) {
+        Reflect.deleteProperty(defaultLabels, label);
+      }
+    }
+
+    return defaultLabels;
+  };
+
+  private initiatePromClient = () => {
+    promClient.register.setDefaultLabels(this.getDefaultLabels());
 
     promClient.collectDefaultMetrics({
       gcDurationBuckets: this.requestDurationHistogramConfig.buckets
@@ -165,28 +189,31 @@ export class OpenAPM {
 
   private parseLabelsFromParams = (
     pathname: string,
-    params: Request['params']
+    params?: Request['params']
   ) => {
     const labels = {} as Record<string, string | undefined>;
-    // Get the label configs and filter it only for param values
-    const configs = Object.keys(this.extractLabels ?? {})
-      .filter((labelName) => {
-        // Filter out the configs that doesn't have "from" key set to "params", also check if the required param actually exists
-        return (
-          this.extractLabels?.[labelName].from === 'params' &&
-          typeof params[this.extractLabels[labelName].key] === 'string'
-        );
-      })
-      .map((labelName) => {
-        return {
-          ...this.extractLabels?.[labelName],
-          label: labelName
-        };
-      });
-
     let parsedPathname = pathname;
+    if (typeof params === 'undefined' || params === null) {
+      return {
+        pathname,
+        labels
+      };
+    }
+    // Get the label configs and filter it only for param values
+    const configs = Object.keys(this.extractLabels ?? {}).map((labelName) => {
+      return {
+        ...this.extractLabels?.[labelName],
+        label: labelName
+      };
+    });
+
     for (const item of configs) {
-      if (item.key && item.label && item.from) {
+      if (
+        item.key &&
+        item.label &&
+        item.from === 'params' &&
+        params?.[item.key]
+      ) {
         const labelValue = params[item.key];
         const escapedLabelValue = labelValue.replace(
           /[.*+?^${}()|[\]\\]/g,
@@ -210,9 +237,11 @@ export class OpenAPM {
     };
   };
 
-  // Middleware Function, which is essentially the response-time middleware with a callback that captures the
-  // metrics
-  public REDMiddleware = ResponseTime(
+  /**
+   * Middleware Function, which is essentially the response-time middleware with a callback that captures the
+   * metrics
+   */
+  private _REDMiddleware = ResponseTime(
     (
       req: IncomingMessage & Request,
       res: ServerResponse<IncomingMessage>,
@@ -250,14 +279,34 @@ export class OpenAPM {
     }
   );
 
+  /**
+   * Middleware Function, which is essentially the response-time middleware with a callback that captures the
+   * metrics
+   */
+  public REDMiddleware = this._REDMiddleware;
+
   public instrument(moduleName: SupportedModules) {
     if (moduleName === 'mysql') {
       try {
         const mysql2 = require('mysql2');
         instrumentMySQL(mysql2);
       } catch (error) {
+        console.error(error);
         throw new Error(
           "OpenAPM couldn't import the mysql2 package, please install it."
+        );
+      }
+      return;
+    }
+
+    if (moduleName === 'nestjs') {
+      try {
+        const { NestFactory } = require('@nestjs/core');
+        instrumentNestFactory(NestFactory, this._REDMiddleware);
+      } catch (error) {
+        console.error(error);
+        throw new Error(
+          "OpenAPM couldn't import the @nestjs/core package, please install it."
         );
       }
       return;

@@ -4,7 +4,7 @@
  * not testing or developing for the same
  *  */
 var express = require('express');
-var { OpenAPM } = require('../dist/cjs/index.js');
+var { OpenAPM } = require('../dist/index.js');
 var mysql2 = require('mysql2');
 
 const openapm = new OpenAPM({
@@ -15,7 +15,8 @@ const openapm = new OpenAPM({
       mask: ':org'
     }
   },
-  customPathsToMask: [/\b\d+(?:,\d+)*\b/gm]
+  customPathsToMask: [/\b\d+(?:,\d+)*\b/gm],
+  excludeDefaultLabels: ['host', 'program']
 });
 
 openapm.instrument('mysql');
