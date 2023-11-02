@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] - 2023-11-2
 
-- Add `excludeDefaultLabels` to the options.
+### Added
+
+- Add `excludeDefaultLabels` to thei options.
 - Add support to instrument `NestJS`
+
+### Changed
+
 - Migrate from Rollup to tsup for building package
 
 ## [0.3.0] - 2023-10-9
@@ -16,7 +21,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add `extractLabels` to the options to extract any labels from the URL params such as a tenant or org name allowing support for multi-tenant monitoring.
--
 - Gracefully shutdown metrics server
 
 ## [0.2.2] - 2023-08-28
