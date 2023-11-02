@@ -9,12 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add `excludeDefaultLabels` to thei options.
-- Add support to instrument `NestJS`
+- Add `excludeDefaultLabels` to the options.
+- Add support to instrument `NestJS` applications.
 
 ### Changed
 
-- Migrate from Rollup to tsup for building package
+- Migrate from Rollup to tsup for building package.
 
 ## [0.3.0] - 2023-10-9
 
