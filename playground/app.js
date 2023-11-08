@@ -21,6 +21,10 @@ const openapm = new OpenAPM({
 openapm.instrument('express');
 openapm.instrument('mysql');
 
+openapm.events.on('application_started', () => {
+  console.log('hello world');
+});
+
 const app = express();
 
 const pool = mysql2.createPool(

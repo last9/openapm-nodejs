@@ -73,7 +73,7 @@ const moduleNames = {
 
 const packageJson = getPackageJson();
 
-export class OpenAPM extends EventEmitter {
+export class OpenAPM {
   private path: string;
   private metricsServerPort: number;
   private environment: string;
@@ -87,9 +87,9 @@ export class OpenAPM extends EventEmitter {
   private excludeDefaultLabels?: Array<DefaultLabels>;
 
   public metricsServer?: Server;
+  public events: EventEmitter;
 
   constructor(options?: OpenAPMOptions) {
-    super();
     // Initializing all the options
     this.path = options?.path ?? '/metrics';
     this.metricsServerPort = options?.metricsServerPort ?? 9097;
@@ -121,6 +121,7 @@ export class OpenAPM extends EventEmitter {
     this.extractLabels = options?.extractLabels ?? {};
     this.customPathsToMask = options?.customPathsToMask;
     this.excludeDefaultLabels = options?.excludeDefaultLabels;
+    this.events = new EventEmitter();
 
     this.initiateMetricsRoute();
     this.initiatePromClient();
@@ -299,7 +300,7 @@ export class OpenAPM extends EventEmitter {
     try {
       if (moduleName === 'express') {
         const express = require('express');
-        instrumentExpress(express, this._REDMiddleware);
+        instrumentExpress(express, this._REDMiddleware, this.events);
       }
       if (moduleName === 'mysql') {
         const mysql2 = require('mysql2');
