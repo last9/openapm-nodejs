@@ -19,9 +19,10 @@ import {
   getParsedPathname,
   getSanitizedPath
 } from './utils';
+
+import { instrumentExpress } from './clients/express';
 import { instrumentMySQL } from './clients/mysql2';
 import { instrumentNestFactory } from './clients/nestjs';
-import { instrumentExpress } from './clients/express';
 
 export type ExtractFromParams = {
   from: 'params';
