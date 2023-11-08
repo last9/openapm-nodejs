@@ -1,4 +1,7 @@
-const defineProperty = <V extends any, N extends string | number | symbol>(
+export const defineProperty = <
+  V extends any,
+  N extends string | number | symbol
+>(
   object: Record<N, V>,
   name: N,
   value: V

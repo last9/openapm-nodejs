@@ -1,5 +1,6 @@
 import * as os from 'os';
 import http from 'http';
+import EventEmitter from 'events';
 import ResponseTime from 'response-time';
 import promClient from 'prom-client';
 
@@ -20,6 +21,7 @@ import {
 } from './utils';
 import { instrumentMySQL } from './clients/mysql2';
 import { instrumentNestFactory } from './clients/nestjs';
+import { instrumentExpress } from './clients/express';
 
 export type ExtractFromParams = {
   from: 'params';
@@ -61,11 +63,21 @@ export interface OpenAPMOptions {
   excludeDefaultLabels?: Array<DefaultLabels>;
 }
 
-export type SupportedModules = 'mysql' | 'nestjs';
+export enum SupportedModules {
+  Express = 'express',
+  MySQL = 'mysql',
+  NestJS = 'nestjs'
+}
+
+const moduleNames = {
+  [SupportedModules.Express]: 'express',
+  [SupportedModules.MySQL]: 'mysql2',
+  [SupportedModules.NestJS]: '@nestjs/core'
+};
 
 const packageJson = getPackageJson();
 
-export class OpenAPM {
+export class OpenAPM extends EventEmitter {
   private path: string;
   private metricsServerPort: number;
   private environment: string;
@@ -81,6 +93,7 @@ export class OpenAPM {
   public metricsServer?: Server;
 
   constructor(options?: OpenAPMOptions) {
+    super();
     // Initializing all the options
     this.path = options?.path ?? '/metrics';
     this.metricsServerPort = options?.metricsServerPort ?? 9097;
@@ -282,39 +295,36 @@ export class OpenAPM {
   /**
    * Middleware Function, which is essentially the response-time middleware with a callback that captures the
    * metrics
+   * @deprecated
    */
   public REDMiddleware = this._REDMiddleware;
 
   public instrument(moduleName: SupportedModules) {
-    if (moduleName === 'mysql') {
-      try {
+    try {
+      if (moduleName === SupportedModules.Express) {
+        const express = require('express');
+        instrumentExpress(express, this._REDMiddleware);
+      }
+      if (moduleName === SupportedModules.MySQL) {
         const mysql2 = require('mysql2');
         instrumentMySQL(mysql2);
-      } catch (error) {
-        console.error(error);
-        throw new Error(
-          "OpenAPM couldn't import the mysql2 package, please install it."
-        );
       }
-      return;
-    }
-
-    if (moduleName === 'nestjs') {
-      try {
+      if (moduleName === SupportedModules.NestJS) {
         const { NestFactory } = require('@nestjs/core');
         instrumentNestFactory(NestFactory, this._REDMiddleware);
-      } catch (error) {
-        console.error(error);
+      }
+    } catch (error) {
+      if (Object.values(SupportedModules).includes(moduleName)) {
+        console.log(error);
         throw new Error(
-          "OpenAPM couldn't import the @nestjs/core package, please install it."
+          `OpenAPM couldn't import the ${moduleNames[moduleName]} package, please install it.`
+        );
+      } else {
+        throw new Error(
+          `OpenAPM doesn't support the following module: ${moduleName}`
         );
       }
-      return;
     }
-
-    throw new Error(
-      `OpenAPM doesn't support the following module: ${moduleName}`
-    );
   }
 }
 
