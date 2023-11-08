@@ -63,16 +63,12 @@ export interface OpenAPMOptions {
   excludeDefaultLabels?: Array<DefaultLabels>;
 }
 
-export enum SupportedModules {
-  Express = 'express',
-  MySQL = 'mysql',
-  NestJS = 'nestjs'
-}
+export type SupportedModules = 'express' | 'mysql' | 'nestjs';
 
 const moduleNames = {
-  [SupportedModules.Express]: 'express',
-  [SupportedModules.MySQL]: 'mysql2',
-  [SupportedModules.NestJS]: '@nestjs/core'
+  express: 'express',
+  mysql: 'mysql2',
+  nestjs: '@nestjs/core'
 };
 
 const packageJson = getPackageJson();
@@ -301,20 +297,20 @@ export class OpenAPM extends EventEmitter {
 
   public instrument(moduleName: SupportedModules) {
     try {
-      if (moduleName === SupportedModules.Express) {
+      if (moduleName === 'express') {
         const express = require('express');
         instrumentExpress(express, this._REDMiddleware);
       }
-      if (moduleName === SupportedModules.MySQL) {
+      if (moduleName === 'mysql') {
         const mysql2 = require('mysql2');
         instrumentMySQL(mysql2);
       }
-      if (moduleName === SupportedModules.NestJS) {
+      if (moduleName === 'nestjs') {
         const { NestFactory } = require('@nestjs/core');
         instrumentNestFactory(NestFactory, this._REDMiddleware);
       }
     } catch (error) {
-      if (Object.values(SupportedModules).includes(moduleName)) {
+      if (Object.keys(moduleNames).includes(moduleName)) {
         console.log(error);
         throw new Error(
           `OpenAPM couldn't import the ${moduleNames[moduleName]} package, please install it.`

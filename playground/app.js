@@ -22,7 +22,6 @@ openapm.instrument('express');
 openapm.instrument('mysql');
 
 const app = express();
-// app.use(openapm.REDMiddleware);
 
 const pool = mysql2.createPool(
   `mysql://express-app:password@127.0.0.1/express` //  If this throws an error, Change the db url to the one you're running on your machine locally or the testing instance you might have hosted.

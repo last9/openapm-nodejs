@@ -14,9 +14,10 @@ describe('REDMiddleware', () => {
   let parsedData: Array<Record<string, any>> = [];
 
   beforeAll(async () => {
-    app = express();
     openapm = new OpenAPM();
-    app.use(openapm.REDMiddleware);
+    openapm.instrument('express');
+
+    app = express();
 
     addRoutes(app);
     app.listen(3002);
