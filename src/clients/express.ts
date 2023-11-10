@@ -2,11 +2,12 @@ import EventEmitter from 'events';
 import type * as Express from 'express';
 import type { RequestHandler } from 'express';
 import { wrap } from '../shimmer';
+import type OpenAPM from '../OpenAPM';
 
 export const instrumentExpress = (
   express: typeof Express,
   redMiddleware: RequestHandler,
-  events: EventEmitter
+  openapm: OpenAPM
 ) => {
   let redMiddlewareAdded = false;
 
@@ -35,7 +36,15 @@ export const instrumentExpress = (
         this: typeof original,
         ...args: Parameters<typeof original>
       ) {
-        events.emit('application_started');
+        openapm.emit('application_started', {
+          timestamp: new Date().toISOString(),
+          event_name: 'express_app',
+          event_state: 'start',
+          entity_type: '',
+          workspace: '',
+          namespace: '',
+          data_source_name: ''
+        });
         return original.apply(this, args);
       };
     }

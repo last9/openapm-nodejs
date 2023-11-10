@@ -1,6 +1,5 @@
 import * as os from 'os';
 import http from 'http';
-import EventEmitter from 'events';
 import ResponseTime from 'response-time';
 import promClient from 'prom-client';
 
@@ -23,6 +22,7 @@ import {
 import { instrumentExpress } from './clients/express';
 import { instrumentMySQL } from './clients/mysql2';
 import { instrumentNestFactory } from './clients/nestjs';
+import { LevitateConfig, LevitateEvents } from './levitate/events';
 
 export type ExtractFromParams = {
   from: 'params';
@@ -62,6 +62,8 @@ export interface OpenAPMOptions {
   customPathsToMask?: Array<RegExp>;
   /** Skip mentioned labels */
   excludeDefaultLabels?: Array<DefaultLabels>;
+  /** Levitate Config */
+  levitateConfig?: LevitateConfig;
 }
 
 export type SupportedModules = 'express' | 'mysql' | 'nestjs';
@@ -74,7 +76,7 @@ const moduleNames = {
 
 const packageJson = getPackageJson();
 
-export class OpenAPM {
+export class OpenAPM extends LevitateEvents {
   private path: string;
   private metricsServerPort: number;
   private environment: string;
@@ -88,9 +90,9 @@ export class OpenAPM {
   private excludeDefaultLabels?: Array<DefaultLabels>;
 
   public metricsServer?: Server;
-  public events: EventEmitter;
 
   constructor(options?: OpenAPMOptions) {
+    super();
     // Initializing all the options
     this.path = options?.path ?? '/metrics';
     this.metricsServerPort = options?.metricsServerPort ?? 9097;
@@ -122,7 +124,7 @@ export class OpenAPM {
     this.extractLabels = options?.extractLabels ?? {};
     this.customPathsToMask = options?.customPathsToMask;
     this.excludeDefaultLabels = options?.excludeDefaultLabels;
-    this.events = new EventEmitter();
+    this.levitateConfig = options?.levitateConfig;
 
     this.initiateMetricsRoute();
     this.initiatePromClient();
@@ -301,7 +303,7 @@ export class OpenAPM {
     try {
       if (moduleName === 'express') {
         const express = require('express');
-        instrumentExpress(express, this._REDMiddleware, this.events);
+        instrumentExpress(express, this._REDMiddleware, this);
       }
       if (moduleName === 'mysql') {
         const mysql2 = require('mysql2');
