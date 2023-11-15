@@ -9,7 +9,7 @@ export interface LevitateConfig {
 }
 
 export interface DomainEventsBody {
-  timestamp: string;
+  [key: string]: any;
   event_name: string;
   event_state: 'start' | 'stop';
   workspace?: string;
@@ -76,16 +76,24 @@ export class LevitateEvents extends EventEmitter {
   }
 
   private applicationStarted(body: DomainEventsBody) {
-    // fetch(this.eventsUrl.toString(), {
-    //   method: 'PUT',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //     'X-LAST9-API-TOKEN': `Bearer `
-    //   },
-    //   body: {
+    const params = new URLSearchParams();
 
-    //   }
-    // });
-    console.log(body);
+    if (!!body) {
+      for (const key in body) {
+        if (key in body) {
+          params.append(key, body[key]);
+        }
+      }
+
+      // fetch(this.eventsUrl.toString(), {
+      //   method: 'PUT',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //     'X-LAST9-API-TOKEN': `Bearer `
+      //   },
+      //   body: params
+      // });
+      console.log(params);
+    }
   }
 }

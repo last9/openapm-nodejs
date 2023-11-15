@@ -18,8 +18,8 @@ const openapm = new OpenAPM({
   customPathsToMask: [/\b\d+(?:,\d+)*\b/gm],
   excludeDefaultLabels: ['host', 'program']
 });
-openapm.on('application_started', () => {
-  console.log('out');
+openapm.on('application_started', (domainEvents) => {
+  console.log(domainEvents);
 });
 openapm.instrument('express');
 openapm.instrument('mysql');
