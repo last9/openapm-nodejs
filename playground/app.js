@@ -21,6 +21,9 @@ const openapm = new OpenAPM({
 openapm.on('application_started', (domainEvents) => {
   console.log(domainEvents);
 });
+openapm.on('application_stopped', (domainEvents) => {
+  console.log(domainEvents);
+});
 openapm.instrument('express');
 openapm.instrument('mysql');
 
