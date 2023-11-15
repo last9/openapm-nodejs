@@ -13,20 +13,18 @@ export const instrumentExpress = (
 
   const routerProto = express.Router as unknown as Express.Router['prototype'];
 
-  if (isWrapped(routerProto, 'use')) {
-    wrap(routerProto, 'use', (original) => {
-      return function wrappedUse(
-        this: typeof original,
-        ...args: Parameters<typeof original>
-      ) {
-        if (!redMiddlewareAdded) {
-          original.apply(this, [redMiddleware]);
-          redMiddlewareAdded = true;
-        }
-        return original.apply(this, args);
-      };
-    });
-  }
+  wrap(routerProto, 'use', (original) => {
+    return function wrappedUse(
+      this: typeof original,
+      ...args: Parameters<typeof original>
+    ) {
+      if (!redMiddlewareAdded) {
+        original.apply(this, [redMiddleware]);
+        redMiddlewareAdded = true;
+      }
+      return original.apply(this, args);
+    };
+  });
 
   if (!isWrapped(express.application, 'listen')) {
     wrap(
