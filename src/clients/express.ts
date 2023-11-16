@@ -41,10 +41,10 @@ export const instrumentExpress = (
             timestamp: new Date().toISOString(),
             event_name: 'express_app',
             event_state: 'start',
-            entity_type: '',
-            workspace: '',
-            namespace: '',
-            data_source_name: ''
+            entity_type: 'API',
+            workspace: openapm.program,
+            namespace: openapm.environment,
+            data_source_name: openapm.levitateConfig?.dataSourceName ?? ''
           });
           const server = original.apply(this, args) as Server;
 
@@ -57,10 +57,10 @@ export const instrumentExpress = (
                 timestamp: new Date().toISOString(),
                 event_name: 'express_app',
                 event_state: 'stop',
-                entity_type: '',
-                workspace: '',
-                namespace: '',
-                data_source_name: ''
+                entity_type: 'API',
+                workspace: openapm.program,
+                namespace: openapm.environment,
+                data_source_name: openapm.levitateConfig?.dataSourceName ?? ''
               });
               return original.apply(this, args);
             };

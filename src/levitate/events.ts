@@ -3,6 +3,7 @@ import EventEmitter from 'events';
 export interface LevitateConfig {
   host?: string;
   orgSlug: string;
+  dataSourceName: string;
   refreshTokens: {
     write: string;
   };
@@ -71,11 +72,12 @@ export class LevitateEvents extends EventEmitter {
 
   private initiateEventListeners() {
     if (typeof this.levitateConfig?.refreshTokens?.write === 'string') {
-      this.once('application_started', this.applicationStarted);
+      this.once('application_started', this.putDomainEvents);
+      this.once('application_stopped', this.putDomainEvents);
     }
   }
 
-  private applicationStarted(body: DomainEventsBody) {
+  private putDomainEvents(body: DomainEventsBody) {
     const params = new URLSearchParams();
 
     if (!!body) {
@@ -85,14 +87,14 @@ export class LevitateEvents extends EventEmitter {
         }
       }
 
-      // fetch(this.eventsUrl.toString(), {
-      //   method: 'PUT',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'X-LAST9-API-TOKEN': `Bearer `
-      //   },
-      //   body: params
-      // });
+      fetch(this.eventsUrl.toString(), {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-LAST9-API-TOKEN': `Bearer `
+        },
+        body: params
+      });
       console.log(params);
     }
   }

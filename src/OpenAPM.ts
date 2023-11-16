@@ -79,7 +79,9 @@ const packageJson = getPackageJson();
 export class OpenAPM extends LevitateEvents {
   private path: string;
   private metricsServerPort: number;
-  private environment: string;
+  readonly environment: string;
+  readonly program: string;
+  readonly levitateConfig?: LevitateConfig | undefined;
   private defaultLabels?: Record<string, string>;
   private requestsCounterConfig: CounterConfiguration<string>;
   private requestDurationHistogramConfig: HistogramConfiguration<string>;
@@ -97,6 +99,7 @@ export class OpenAPM extends LevitateEvents {
     this.path = options?.path ?? '/metrics';
     this.metricsServerPort = options?.metricsServerPort ?? 9097;
     this.environment = options?.environment ?? 'production';
+    this.program = packageJson?.name ?? '';
     this.defaultLabels = options?.defaultLabels;
     this.requestsCounterConfig = options?.requestsCounterConfig ?? {
       name: 'http_requests_total',
