@@ -1,4 +1,6 @@
 import EventEmitter from 'events';
+import type { OpenAPMOptions } from '../OpenAPM';
+import { fetch, request } from 'undici';
 
 export interface LevitateConfig {
   host?: string;
@@ -23,9 +25,10 @@ const defaultHost = 'https://app.last9.io';
 
 export class LevitateEvents extends EventEmitter {
   private eventsUrl: URL;
-  public levitateConfig?: LevitateConfig;
-  constructor() {
+  readonly levitateConfig?: LevitateConfig;
+  constructor(options?: OpenAPMOptions) {
     super();
+    this.levitateConfig = options?.levitateConfig;
     this.eventsUrl = new URL(
       `/api/v4/organizations/${this.levitateConfig?.orgSlug}/domain_events`,
       this.levitateConfig?.host ?? defaultHost
@@ -77,25 +80,39 @@ export class LevitateEvents extends EventEmitter {
     }
   }
 
-  private putDomainEvents(body: DomainEventsBody) {
-    const params = new URLSearchParams();
+  private generateAccessToken = () => {
+    const endpoint = '/api/v4/oauth/access_token';
+    const url = new URL(endpoint, this.levitateConfig?.host ?? defaultHost);
 
+    try {
+      return fetch(url.toString(), {
+        method: 'POST',
+        body: JSON.stringify({
+          refresh_token: this.levitateConfig?.refreshTokens.write ?? ''
+        })
+      }).then((response) => {
+        return response.json();
+      }) as Promise<{ access_token: string }>;
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  private async putDomainEvents(body: DomainEventsBody) {
     if (!!body) {
-      for (const key in body) {
-        if (key in body) {
-          params.append(key, body[key]);
-        }
+      try {
+        const tokenResponse = await this.generateAccessToken();
+        await request(this.eventsUrl.toString(), {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-LAST9-API-TOKEN': `Bearer ${tokenResponse?.access_token}`
+          },
+          body: JSON.stringify(body)
+        });
+      } catch (error) {
+        console.log(error);
       }
-
-      fetch(this.eventsUrl.toString(), {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-LAST9-API-TOKEN': `Bearer `
-        },
-        body: params
-      });
-      console.log(params);
     }
   }
 }

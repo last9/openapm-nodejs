@@ -3,6 +3,7 @@
  * Also, comment out the things that you are not using. For example, you can comment out the mysql code if you are
  * not testing or developing for the same
  *  */
+require('dotenv').config();
 var express = require('express');
 var { OpenAPM } = require('../dist/index.js');
 var mysql2 = require('mysql2');
@@ -15,15 +16,17 @@ const openapm = new OpenAPM({
       mask: ':org'
     }
   },
+  levitateConfig: {
+    orgSlug: process.env['LEVITATE_ORG_SLUG'],
+    dataSourceName: process.env['LEVITATE_DATASOURCE'],
+    refreshTokens: {
+      write: process.env['LEVITATE_WRITE_REFRESH_TOKEN']
+    }
+  },
   customPathsToMask: [/\b\d+(?:,\d+)*\b/gm],
   excludeDefaultLabels: ['host', 'program']
 });
-openapm.on('application_started', (domainEvents) => {
-  console.log(domainEvents);
-});
-openapm.on('application_stopped', (domainEvents) => {
-  console.log(domainEvents);
-});
+
 openapm.instrument('express');
 openapm.instrument('mysql');
 
@@ -58,6 +61,6 @@ app.get('/cancel/:ids', (req, res) => {
   res.status(200).json({});
 });
 
-app.listen(3000, () => {
+const server = app.listen(3000, () => {
   console.log('serving at 3000');
 });

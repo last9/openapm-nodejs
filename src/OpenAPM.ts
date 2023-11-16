@@ -81,7 +81,6 @@ export class OpenAPM extends LevitateEvents {
   private metricsServerPort: number;
   readonly environment: string;
   readonly program: string;
-  readonly levitateConfig?: LevitateConfig | undefined;
   private defaultLabels?: Record<string, string>;
   private requestsCounterConfig: CounterConfiguration<string>;
   private requestDurationHistogramConfig: HistogramConfiguration<string>;
@@ -94,7 +93,7 @@ export class OpenAPM extends LevitateEvents {
   public metricsServer?: Server;
 
   constructor(options?: OpenAPMOptions) {
-    super();
+    super(options);
     // Initializing all the options
     this.path = options?.path ?? '/metrics';
     this.metricsServerPort = options?.metricsServerPort ?? 9097;
@@ -127,7 +126,6 @@ export class OpenAPM extends LevitateEvents {
     this.extractLabels = options?.extractLabels ?? {};
     this.customPathsToMask = options?.customPathsToMask;
     this.excludeDefaultLabels = options?.excludeDefaultLabels;
-    this.levitateConfig = options?.levitateConfig;
 
     this.initiateMetricsRoute();
     this.initiatePromClient();
