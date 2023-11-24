@@ -1,6 +1,7 @@
 import EventEmitter from 'events';
+import chalk from 'chalk';
 import type { OpenAPMOptions } from '../OpenAPM';
-import { fetch, request } from 'undici';
+import { request } from 'undici';
 
 export interface LevitateConfig {
   host?: string;
@@ -41,20 +42,12 @@ export class LevitateEvents extends EventEmitter {
     event: 'application_started',
     ...args: (DomainEventsBody | any)[]
   ): boolean;
-  public emit(
-    event: 'application_stopped',
-    ...args: (DomainEventsBody | any)[]
-  ): boolean;
   public emit(event: any, ...args: any[]): any {
     return super.emit(event, ...args);
   }
 
   public on(
     event: 'application_started',
-    listener: (...args: (DomainEventsBody | any)[]) => void
-  ): this;
-  public on(
-    event: 'application_stopped',
     listener: (...args: (DomainEventsBody | any)[]) => void
   ): this;
   public on(event: any, listener: (...args: any[]) => void): this {
@@ -65,43 +58,47 @@ export class LevitateEvents extends EventEmitter {
     event: 'application_started',
     listener: (...args: (DomainEventsBody | any)[]) => void
   ): this;
-  public once(
-    event: 'application_stopped',
-    listener: (...args: (DomainEventsBody | any)[]) => void
-  ): this;
   public once(event: any, listener: (...args: any[]) => void): this {
     return super.on(event, listener);
   }
 
   private initiateEventListeners() {
     if (typeof this.levitateConfig?.refreshTokens?.write === 'string') {
+      console.log(
+        chalk.green(`\nYou've enabled Events powered by Levitate 🚀`)
+      );
+      console.log(
+        'For more info checkout https://docs.last9.io/change-events\n'
+      );
       this.once('application_started', this.putDomainEvents);
-      this.once('application_stopped', this.putDomainEvents);
     }
   }
 
-  private generateAccessToken = () => {
+  private generateAccessToken = async () => {
     const endpoint = '/api/v4/oauth/access_token';
     const url = new URL(endpoint, this.levitateConfig?.host ?? defaultHost);
 
-    try {
-      return fetch(url.toString(), {
-        method: 'POST',
-        body: JSON.stringify({
-          refresh_token: this.levitateConfig?.refreshTokens.write ?? ''
-        })
-      }).then((response) => {
-        return response.json();
-      }) as Promise<{ access_token: string }>;
-    } catch (error) {
-      console.log(error);
-    }
+    return request(url.toString(), {
+      method: 'POST',
+      body: JSON.stringify({
+        refresh_token: this.levitateConfig?.refreshTokens.write ?? ''
+      })
+    })
+      .then((response) => {
+        return response.body.json();
+      })
+      .catch((error) => {
+        console.log(error);
+        return;
+      });
   };
 
   private async putDomainEvents(body: DomainEventsBody) {
     if (!!body) {
       try {
-        const tokenResponse = await this.generateAccessToken();
+        const tokenResponse = (await this.generateAccessToken()) as
+          | { access_token: string }
+          | undefined;
         await request(this.eventsUrl.toString(), {
           method: 'PUT',
           headers: {

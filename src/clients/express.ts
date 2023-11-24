@@ -1,3 +1,4 @@
+import * as os from 'os';
 import type * as Express from 'express';
 import type { RequestHandler } from 'express';
 import { isWrapped, wrap } from '../shimmer';
@@ -39,33 +40,14 @@ export const instrumentExpress = (
         ) {
           openapm.emit('application_started', {
             timestamp: new Date().toISOString(),
-            event_name: 'express_app',
+            event_name: `${openapm.program}_app`,
             event_state: 'start',
-            entity_type: 'API',
-            workspace: openapm.program,
+            entity_type: 'app',
+            workspace: os.hostname(),
             namespace: openapm.environment,
             data_source_name: openapm.levitateConfig?.dataSourceName ?? ''
           });
           const server = original.apply(this, args) as Server;
-
-          wrap(server, 'close', function (original: Server['close']) {
-            return function (
-              this: Server['close'],
-              ...args: Parameters<Server['close']>
-            ) {
-              openapm.emit('application_stopped', {
-                timestamp: new Date().toISOString(),
-                event_name: 'express_app',
-                event_state: 'stop',
-                entity_type: 'API',
-                workspace: openapm.program,
-                namespace: openapm.environment,
-                data_source_name: openapm.levitateConfig?.dataSourceName ?? ''
-              });
-              return original.apply(this, args);
-            };
-          });
-
           return server;
         };
       }
