@@ -50,7 +50,7 @@ openapm.instrument('mysql');
 OpenAPM currently supports RED Metrics for NestJS v4 and above.
 
 ```js
-openapm.instrument('nestjs')
+openapm.instrument('nestjs');
 ```
 
 ## Options
@@ -114,10 +114,27 @@ const openapm = new OpenAPM({
       }
    ```
 9. `excludeDefaultLabels`: (Optional) Provide labels to exclude from the default labels
+
 ```js
 {
   ...
   excludeDefaultLabels: ['environment', 'version']
+}
+```
+
+10. `levitateConfig`: (Optional) Configuration for Levitate TSDB. Adding this configuration will enable the [Change Events](https://docs.last9.io/docs/change-events).
+
+```js
+{
+   ...
+   levitateConfig: {
+      host: 'https://app.last9.io',
+      orgSlug: 'last9', /** The slug can be obtained from the Last9 dashboard.*/
+      dataSourceName: 'data-source', /** The data source can be obtained from the data source pages in the Last9 dashboard*/
+      refreshTokens: {
+         write: '0d2a1a9a45XXXXXXXXXXXXXX3f1342790d2a1a9a45XXXXXXXXXXXXXX3f1342790d2a1a9a45XXXXXXXXXXXXXX3f134279' /** You can get this from the API access page on Last9 dashboard*/
+      }
+   }
 }
 ```
 

@@ -18,8 +18,11 @@ import {
   getParsedPathname,
   getSanitizedPath
 } from './utils';
+
+import { instrumentExpress } from './clients/express';
 import { instrumentMySQL } from './clients/mysql2';
 import { instrumentNestFactory } from './clients/nestjs';
+import { LevitateConfig, LevitateEvents } from './levitate/events';
 
 export type ExtractFromParams = {
   from: 'params';
@@ -59,16 +62,25 @@ export interface OpenAPMOptions {
   customPathsToMask?: Array<RegExp>;
   /** Skip mentioned labels */
   excludeDefaultLabels?: Array<DefaultLabels>;
+  /** Levitate Config */
+  levitateConfig?: LevitateConfig;
 }
 
-export type SupportedModules = 'mysql' | 'nestjs';
+export type SupportedModules = 'express' | 'mysql' | 'nestjs';
+
+const moduleNames = {
+  express: 'express',
+  mysql: 'mysql2',
+  nestjs: '@nestjs/core'
+};
 
 const packageJson = getPackageJson();
 
-export class OpenAPM {
+export class OpenAPM extends LevitateEvents {
   private path: string;
   private metricsServerPort: number;
-  private environment: string;
+  readonly environment: string;
+  readonly program: string;
   private defaultLabels?: Record<string, string>;
   private requestsCounterConfig: CounterConfiguration<string>;
   private requestDurationHistogramConfig: HistogramConfiguration<string>;
@@ -81,10 +93,12 @@ export class OpenAPM {
   public metricsServer?: Server;
 
   constructor(options?: OpenAPMOptions) {
+    super(options);
     // Initializing all the options
     this.path = options?.path ?? '/metrics';
     this.metricsServerPort = options?.metricsServerPort ?? 9097;
     this.environment = options?.environment ?? 'production';
+    this.program = packageJson?.name ?? '';
     this.defaultLabels = options?.defaultLabels;
     this.requestsCounterConfig = options?.requestsCounterConfig ?? {
       name: 'http_requests_total',
@@ -282,39 +296,36 @@ export class OpenAPM {
   /**
    * Middleware Function, which is essentially the response-time middleware with a callback that captures the
    * metrics
+   * @deprecated
    */
   public REDMiddleware = this._REDMiddleware;
 
   public instrument(moduleName: SupportedModules) {
-    if (moduleName === 'mysql') {
-      try {
+    try {
+      if (moduleName === 'express') {
+        const express = require('express');
+        instrumentExpress(express, this._REDMiddleware, this);
+      }
+      if (moduleName === 'mysql') {
         const mysql2 = require('mysql2');
         instrumentMySQL(mysql2);
-      } catch (error) {
-        console.error(error);
-        throw new Error(
-          "OpenAPM couldn't import the mysql2 package, please install it."
-        );
       }
-      return;
-    }
-
-    if (moduleName === 'nestjs') {
-      try {
+      if (moduleName === 'nestjs') {
         const { NestFactory } = require('@nestjs/core');
         instrumentNestFactory(NestFactory, this._REDMiddleware);
-      } catch (error) {
-        console.error(error);
+      }
+    } catch (error) {
+      if (Object.keys(moduleNames).includes(moduleName)) {
+        console.log(error);
         throw new Error(
-          "OpenAPM couldn't import the @nestjs/core package, please install it."
+          `OpenAPM couldn't import the ${moduleNames[moduleName]} package, please install it.`
+        );
+      } else {
+        throw new Error(
+          `OpenAPM doesn't support the following module: ${moduleName}`
         );
       }
-      return;
     }
-
-    throw new Error(
-      `OpenAPM doesn't support the following module: ${moduleName}`
-    );
   }
 }
 
