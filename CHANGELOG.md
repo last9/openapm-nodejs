@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Optional [Change Events](https://docs.last9.io/docs/change-events) Support. Track `application_start` event in Levitate along with other APM metrics.
+- Optional [Change Events](https://docs.last9.io/docs/change-events) Support. Track `application_start` event for Express applications in Levitate along with other APM metrics.
 
 ## [0.4.0] - 2023-11-2
 
