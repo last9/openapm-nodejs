@@ -15,8 +15,7 @@ import type { IncomingMessage, ServerResponse, Server } from 'http';
 import {
   getHostIpAddress,
   getPackageJson,
-  getParsedPathname,
-  getSanitizedPath
+  getSanitizedPath,
 } from './utils';
 
 import { instrumentExpress } from './clients/express';
@@ -265,13 +264,9 @@ export class OpenAPM extends LevitateEvents {
       // Extract labels from the request params
       const { pathname, labels: parsedLabelsFromPathname } =
         this.parseLabelsFromParams(sanitizedPathname, req.params);
-      const parsedPathname = getParsedPathname(
-        pathname,
-        this.customPathsToMask
-      );
-
-      const labels: Record<string, string> = {
-        path: parsedPathname,
+        const path = req.route?.path || pathname;
+        const labels: Record<string, string> = {
+        path: path,
         status: res.statusCode.toString(),
         method: req.method as string,
         ...parsedLabelsFromPathname
