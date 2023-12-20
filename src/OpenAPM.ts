@@ -23,6 +23,7 @@ import { instrumentExpress } from './clients/express';
 import { instrumentMySQL } from './clients/mysql2';
 import { instrumentNestFactory } from './clients/nestjs';
 import { LevitateConfig, LevitateEvents } from './levitate/events';
+import { instrumentPG } from './clients/pg';
 
 export type ExtractFromParams = {
   from: 'params';
@@ -66,12 +67,13 @@ export interface OpenAPMOptions {
   levitateConfig?: LevitateConfig;
 }
 
-export type SupportedModules = 'express' | 'mysql' | 'nestjs';
+export type SupportedModules = 'express' | 'mysql' | 'nestjs' | 'postgres';
 
 const moduleNames = {
   express: 'express',
   mysql: 'mysql2',
-  nestjs: '@nestjs/core'
+  nestjs: '@nestjs/core',
+  postgres: 'pg'
 };
 
 const packageJson = getPackageJson();
@@ -297,6 +299,10 @@ export class OpenAPM extends LevitateEvents {
       if (moduleName === 'nestjs') {
         const { NestFactory } = require('@nestjs/core');
         instrumentNestFactory(NestFactory, this._REDMiddleware);
+      }
+      if (moduleName === 'postgres') {
+        const pg = require('pg');
+        instrumentPG(pg);
       }
     } catch (error) {
       if (Object.keys(moduleNames).includes(moduleName)) {

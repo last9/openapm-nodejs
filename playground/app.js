@@ -6,7 +6,8 @@
 require('dotenv').config();
 var express = require('express');
 var { OpenAPM } = require('../dist/index.js');
-var mysql2 = require('mysql2');
+var pg = require('pg');
+// var mysql2 = require('mysql2');
 
 const openapm = new OpenAPM({
   extractLabels: {
@@ -28,27 +29,34 @@ const openapm = new OpenAPM({
 });
 
 openapm.instrument('express');
-openapm.instrument('mysql');
+openapm.instrument('postgres');
 
 const app = express();
+let client;
+// const pool = mysql2.createPool(
+//   `mysql://express-app:password@127.0.0.1/express` //  If this throws an error, Change the db url to the one you're running on your machine locally or the testing instance you might have hosted.
+// );
 
-const pool = mysql2.createPool(
-  `mysql://express-app:password@127.0.0.1/express` //  If this throws an error, Change the db url to the one you're running on your machine locally or the testing instance you might have hosted.
-);
+app.get('/result', async (req, res) => {
+  // pool.getConnection((err, conn) => {
+  //   conn.query(
+  //     {
+  //       sql: 'SELECT SLEEP(RAND() * 10)'
+  //     },
+  //     (...args) => {
+  //       console.log(args);
+  //     }
+  //   );
+  // });
+  // await client.query(`INSERT INTO "users" (username) VALUES ('JohnDoe');`);
+  let result;
+  try {
+    result = await client.query('select * from users;');
+  } catch (error) {}
 
-app.get('/result', (req, res) => {
-  pool.getConnection((err, conn) => {
-    conn.query(
-      {
-        sql: 'SELECT SLEEP(RAND() * 10)'
-      },
-      (...args) => {
-        console.log(args);
-      }
-    );
+  res.status(200).json({
+    users: result?.rows
   });
-
-  res.status(200).json({});
 });
 
 app.get('/organizations/:org/users', (req, res) => {
@@ -61,6 +69,9 @@ app.get('/cancel/:ids', (req, res) => {
   res.status(200).json({});
 });
 
-const server = app.listen(3000, () => {
+const server = app.listen(3000, async () => {
+  client = new pg.Client('postgresql://tester:password@localhost:5432/testdb'); //  If this throws an error, Change the db url to the one you're running on your machine locally or the testing instance you might have hosted.
+
+  await client.connect();
   console.log('serving at 3000');
 });
