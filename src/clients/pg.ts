@@ -1,7 +1,7 @@
 import type * as PG from 'pg';
 import promClient from 'prom-client';
-import type OpenAPM from '../OpenAPM';
 import { wrap } from '../shimmer';
+import { maskValuesInSQLQuery } from '../utils';
 
 export const instrumentPG = (pg: typeof PG | { default: typeof PG }) => {
   const histogram = new promClient.Histogram({
@@ -14,23 +14,13 @@ export const instrumentPG = (pg: typeof PG | { default: typeof PG }) => {
   const pgModule = // @ts-ignore
     (pg?.[Symbol.toStringTag] === 'Module' ? pg.default : pg) as typeof PG;
 
-  // wrap(
-  //   pgModule.Client.prototype,
-  //   'connect',
-  //   (original: PG.Client['connect']) => {
-  //     return async function (
-  //       this: PG.Client['connect'],
-  //       ...args: Parameters<PG.Client['connect']>
-  //     ) {
-  //       const result = await original.apply(this, args);
-  //       return result;
-  //     } as PG.Client['connect'];
-  //   }
-  // );
-
   wrap(pgModule.Client.prototype, 'query', (original: PG.Client['query']) => {
     return async function (
-      this: PG.Client['query'],
+      this: PG.Client['query'] & {
+        connectionParameters: {
+          database: string;
+        };
+      },
       ...args: Parameters<PG.Client['query']>
     ) {
       let query = '';
@@ -40,10 +30,12 @@ export const instrumentPG = (pg: typeof PG | { default: typeof PG }) => {
         // @ts-ignore
         query = args[0]?.text;
       }
+
       const end = histogram.startTimer({
-        query: query,
-        database_name: '[db-name]'
+        query: maskValuesInSQLQuery(query).substring(0, 100),
+        database_name: this.connectionParameters.database ?? '[db-name]'
       });
+
       try {
         const result = await original.apply(this, args);
         end({
