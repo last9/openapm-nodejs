@@ -53,8 +53,6 @@ export interface OpenAPMOptions {
   requestDurationHistogramConfig?: HistogramConfiguration<string>;
   /** Extract labels from URL params, subdomain, header */
   extractLabels?: Record<string, ExtractFromParams>;
-  /** Provide extra masks to mask the URL pathnames  */
-  customPathsToMask?: Array<RegExp>;
   /** Skip mentioned labels */
   excludeDefaultLabels?: Array<DefaultLabels>;
   /** Levitate Config */
@@ -82,7 +80,6 @@ export class OpenAPM extends LevitateEvents {
   private requestsCounter?: Counter;
   private requestsDurationHistogram?: Histogram;
   private extractLabels?: Record<string, ExtractFromParams>;
-  private customPathsToMask?: Array<RegExp>;
   private excludeDefaultLabels?: Array<DefaultLabels>;
 
   public metricsServer?: Server;
@@ -119,7 +116,6 @@ export class OpenAPM extends LevitateEvents {
       };
 
     this.extractLabels = options?.extractLabels ?? {};
-    this.customPathsToMask = options?.customPathsToMask;
     this.excludeDefaultLabels = options?.excludeDefaultLabels;
 
     this.initiateMetricsRoute();
