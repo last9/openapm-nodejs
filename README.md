@@ -13,6 +13,7 @@ npm install --save @last9/openapm@latest
 1. [Express](#express)
 2. [MySQL](#mysql)
 3. [NestJS](#nestjs)
+4. [Postgres](#postgres)
 
 ### Express
 
@@ -37,7 +38,7 @@ app.listen(3000)
 
 ### MySQL
 
-This currently supports instrumentation for all Node.js ORMs, which are [mysql2](https://www.npmjs.com/package/mysql2) compatible.
+This currently supports instrumentation for all Node.js ORMs, that uses [mysql2](https://www.npmjs.com/package/mysql2).
 
 Ensure to add this line of code before you initialize db `connection/pool/poolCluster`.
 
@@ -52,6 +53,10 @@ OpenAPM currently supports RED Metrics for NestJS v4 and above.
 ```js
 openapm.instrument('nestjs');
 ```
+
+### Postgres
+
+This currently supports instrumentation for all Node.js ORMs, that uses [pg](https://www.npmjs.com/package/pg).
 
 ## Options
 
