@@ -58,6 +58,10 @@ openapm.instrument('nestjs');
 
 This currently supports instrumentation for all Node.js ORMs, that uses [pg](https://www.npmjs.com/package/pg).
 
+```js
+openapm.instrument('postgres');
+```
+
 ## Options
 
 ### Usage
