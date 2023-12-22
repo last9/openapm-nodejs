@@ -53,7 +53,9 @@ export interface OpenAPMOptions {
   requestDurationHistogramConfig?: HistogramConfiguration<string>;
   /** Extract labels from URL params, subdomain, header */
   extractLabels?: Record<string, ExtractFromParams>;
-  /** Provide extra masks to mask the URL pathnames  */
+  /**
+   * @deprecated This option is deprecated and won't have any impact on masking the pathnames.
+   * */
   customPathsToMask?: Array<RegExp>;
   /** Skip mentioned labels */
   excludeDefaultLabels?: Array<DefaultLabels>;
