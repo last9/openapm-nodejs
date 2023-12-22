@@ -69,7 +69,15 @@ app.get('/cancel/:ids', (req, res) => {
   res.status(200).json({});
 });
 
-const server = app.listen(3000, async () => {
+app.all('/api/v2/product/search/:term', (req, res) => {
+  res.status(200).json({});
+});
+
+app.all('/api/v1/slug/:slug', (req, res) => {
+  res.status(200).json({});
+});
+
+const server = app.listen(3000, () => {
   client = new pg.Client('postgresql://tester:password@localhost:5432/testdb'); //  If this throws an error, Change the db url to the one you're running on your machine locally or the testing instance you might have hosted.
 
   await client.connect();

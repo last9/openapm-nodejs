@@ -12,12 +12,7 @@ import type {
 import type { Request } from 'express';
 import type { IncomingMessage, ServerResponse, Server } from 'http';
 
-import {
-  getHostIpAddress,
-  getPackageJson,
-  getParsedPathname,
-  getSanitizedPath
-} from './utils';
+import { getHostIpAddress, getPackageJson, getSanitizedPath } from './utils';
 
 import { instrumentExpress } from './clients/express';
 import { instrumentMySQL } from './clients/mysql2';
@@ -59,7 +54,9 @@ export interface OpenAPMOptions {
   requestDurationHistogramConfig?: HistogramConfiguration<string>;
   /** Extract labels from URL params, subdomain, header */
   extractLabels?: Record<string, ExtractFromParams>;
-  /** Provide extra masks to mask the URL pathnames  */
+  /**
+   * @deprecated This option is deprecated and won't have any impact on masking the pathnames.
+   * */
   customPathsToMask?: Array<RegExp>;
   /** Skip mentioned labels */
   excludeDefaultLabels?: Array<DefaultLabels>;
@@ -251,13 +248,10 @@ export class OpenAPM extends LevitateEvents {
       // Extract labels from the request params
       const { pathname, labels: parsedLabelsFromPathname } =
         this.parseLabelsFromParams(sanitizedPathname, req.params);
-      const parsedPathname = getParsedPathname(
-        pathname,
-        this.customPathsToMask
-      );
-
+      // Make sure you copy baseURL as well in case of nested routes.
+      const path = req.route ? req.baseUrl + req.route?.path : pathname;
       const labels: Record<string, string> = {
-        path: parsedPathname,
+        path: path,
         status: res.statusCode.toString(),
         method: req.method as string,
         ...parsedLabelsFromPathname
