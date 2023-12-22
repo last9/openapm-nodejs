@@ -18,6 +18,7 @@ import { instrumentExpress } from './clients/express';
 import { instrumentMySQL } from './clients/mysql2';
 import { instrumentNestFactory } from './clients/nestjs';
 import { LevitateConfig, LevitateEvents } from './levitate/events';
+import { instrumentPG } from './clients/pg';
 
 export type ExtractFromParams = {
   from: 'params';
@@ -63,12 +64,13 @@ export interface OpenAPMOptions {
   levitateConfig?: LevitateConfig;
 }
 
-export type SupportedModules = 'express' | 'mysql' | 'nestjs';
+export type SupportedModules = 'express' | 'mysql' | 'nestjs' | 'postgres';
 
 const moduleNames = {
   express: 'express',
   mysql: 'mysql2',
-  nestjs: '@nestjs/core'
+  nestjs: '@nestjs/core',
+  postgres: 'pg'
 };
 
 const packageJson = getPackageJson();
@@ -162,20 +164,6 @@ export class OpenAPM extends LevitateEvents {
     );
   };
 
-  private gracefullyShutdownMetricsServer = () => {
-    this.metricsServer?.close((err) => {
-      promClient.register.clear();
-      console.log('Shutting down metrics server.');
-      if (err) {
-        console.error('Error while shutting down the metrics server:', err);
-        process.exit(1);
-      } else {
-        console.log('Metrics server shut down gracefully.');
-        process.exit(0);
-      }
-    });
-  };
-
   private initiateMetricsRoute = () => {
     // Creating native http server
     this.metricsServer = http.createServer(async (req, res) => {
@@ -194,8 +182,6 @@ export class OpenAPM extends LevitateEvents {
     this.metricsServer?.listen(this.metricsServerPort, () => {
       console.log(`Metrics server running at ${this.metricsServerPort}`);
     });
-    process.on('SIGINT', this.gracefullyShutdownMetricsServer);
-    process.on('SIGTERM', this.gracefullyShutdownMetricsServer);
   };
 
   private parseLabelsFromParams = (
@@ -307,6 +293,10 @@ export class OpenAPM extends LevitateEvents {
       if (moduleName === 'nestjs') {
         const { NestFactory } = require('@nestjs/core');
         instrumentNestFactory(NestFactory, this._REDMiddleware);
+      }
+      if (moduleName === 'postgres') {
+        const pg = require('pg');
+        instrumentPG(pg);
       }
     } catch (error) {
       if (Object.keys(moduleNames).includes(moduleName)) {
