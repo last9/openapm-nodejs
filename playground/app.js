@@ -61,6 +61,14 @@ app.get('/cancel/:ids', (req, res) => {
   res.status(200).json({});
 });
 
+app.all('/api/v2/product/search/:term', (req, res) => {
+  res.status(200).json({});
+});
+
+app.all('/api/v1/slug/:slug', (req, res) => {
+  res.status(200).json({});
+});
+
 const server = app.listen(3000, () => {
   console.log('serving at 3000');
 });

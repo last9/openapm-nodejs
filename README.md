@@ -106,14 +106,7 @@ const openapm = new OpenAPM({
       }
    }
    ```
-8. `customPathsToMask`: (Optional) Provide extra masks to mask the URL pathnames. Checkout [url-value-parser's](https://www.npmjs.com/package/url-value-parser) extraMasks option to know more.
-   ```js
-      {
-         ...,
-         customPathsToMask: [/\b\d+(?:,\d+)*\b/gm] // Accepts an array of Regex
-      }
-   ```
-9. `excludeDefaultLabels`: (Optional) Provide labels to exclude from the default labels
+8. `excludeDefaultLabels`: (Optional) Provide labels to exclude from the default labels
 
 ```js
 {
@@ -122,7 +115,7 @@ const openapm = new OpenAPM({
 }
 ```
 
-10. `levitateConfig`: (Optional) Configuration for Levitate TSDB. Adding this configuration will enable the [Change Events](https://docs.last9.io/docs/change-events).
+9. `levitateConfig`: (Optional) Configuration for Levitate TSDB. Adding this configuration will enable the [Change Events](https://docs.last9.io/docs/change-events).
 
 ```js
 {
