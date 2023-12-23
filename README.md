@@ -1,6 +1,15 @@
 <a href="https://last9.io"><img src="https://last9.github.io/assets/last9-github-badge.svg" align="right" /></a>
 
 # @last9/openapm
+An Open-Source tool by Last9 to track NodeJS performance metrics using Prometheus. Track metrics like CPU usage, Garbage collection, Event loop lag and more.
+
+## Table of Contents
+1. [Installation](#installation)
+2. [Usage](#usage)
+3. [Options](#options)
+4. [Setup Locally](#setup-locally)
+5. [Grafana Dashboard View](#grafana-dashboard-view)
+6. [About Last9](#about-last9)
 
 ## Installation
 
@@ -21,7 +30,7 @@ change the port, you can update it through the options
 ([See the options documentation](#options)).
 
 ```js
-const express = require('express)
+const express = require('express')
 const { OpenAPM } = require('@last9/openapm')
 
 const app = express();
