@@ -22,7 +22,7 @@ change the port, you can update it through the options
 ([See the options documentation](#options)).
 
 ```js
-const express = require('express)
+const express = require('express')
 const { OpenAPM } = require('@last9/openapm')
 
 const app = express();
