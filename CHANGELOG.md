@@ -9,13 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Patched
 
-- Slip the `OPTIONS` request from the instrumentation for Express.js and Nest.js
-
+- Skip the `OPTIONS` requests from the instrumentation.
+  
 ## [0.6.0] - 2023-12-22
 
 ### Added
 
-- Ability to automatically detect correct `path` label based on routes defined by users in their applications. This will solve the cardinality blow up of endpoints not getting folded correctly.
+- Ability to automatically detect correct `path` labels based on routes defined by users in their applications. This will solve the cardinality blowup of endpoints not being folded correctly.
 
 ### Deprecated
 
