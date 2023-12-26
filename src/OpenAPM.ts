@@ -264,14 +264,14 @@ export class OpenAPM extends LevitateEvents {
         this.parseLabelsFromParams(sanitizedPathname, req.params);
 
       // Skip the OPTIONS requests not to blow up cardinality. Express does not provide
-      // information about the route for OPTIONS requests which makes it very
+      // information about the route for OPTIONS requests, which makes it very
       // hard to detect correct PATH. Until we fix it properly, the requests are skipped
-      // to not blog up the cardinality. 
+      // to not blow up the cardinality. 
       if (!req.route && req.method === 'OPTIONS') {
         return;
       }
 
-      // Make sure you copy baseURL as well in case of nested routes.
+      // Make sure you copy baseURL in case of nested routes.
       const path = req.route ? req.baseUrl + req.route?.path : pathname;
       const labels: Record<string, string> = {
         path: path,
