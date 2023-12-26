@@ -262,12 +262,12 @@ export class OpenAPM extends LevitateEvents {
       // Extract labels from the request params
       const { pathname, labels: parsedLabelsFromPathname } =
         this.parseLabelsFromParams(sanitizedPathname, req.params);
-      // Make sure you copy baseURL as well in case of nested routes.
 
       if (!req.route && req.method === 'OPTIONS') {
         return;
       }
 
+      // Make sure you copy baseURL as well in case of nested routes.
       const path = req.route ? req.baseUrl + req.route?.path : pathname;
       const labels: Record<string, string> = {
         path: path,
