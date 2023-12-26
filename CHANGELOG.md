@@ -7,9 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.6.1] - 2023-12-26
 
-### Patched
+### Added
 
-- Skip the `OPTIONS` requests from the instrumentation.
+- Skip the `OPTIONS` requests from the instrumentation process.
   
 ## [0.6.0] - 2023-12-22
 
