@@ -5,16 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2023-12-26
+
+### Patched
+
+- Skip the `OPTIONS` requests from the instrumentation.
+  
 ## [0.6.0] - 2023-12-22
 
 ### Added
 
-- Ability to automatically detect correct `path` label based on routes defined by users in their applications. This will solve the cardinality blow up of endpoints not getting folded correctly.
+- Ability to automatically detect correct `path` labels based on routes defined by users in their applications. This will solve the cardinality blowup of endpoints not being folded correctly.
 
 ### Deprecated
 
 - Optional `customPathsToMask` option to mask certain values as it is no longer needed now. It will be removed in
-future releases.
+  future releases.
 
 ## [0.5.0] - 2023-12-4
 

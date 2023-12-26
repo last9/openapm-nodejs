@@ -61,7 +61,7 @@ app.get('/cancel/:ids', (req, res) => {
   res.status(200).json({});
 });
 
-app.all('/api/v2/product/search/:term', (req, res) => {
+app.post('/api/v2/product/search/:term', (req, res) => {
   res.status(200).json({});
 });
 
