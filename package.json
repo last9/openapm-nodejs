@@ -1,7 +1,7 @@
 {
   "name": "@last9/openapm",
   "description": "OpenAPM for Node.js",
-  "version": "0.6.1-beta.1",
+  "version": "0.6.1",
   "main": "dist/index.js",
   "module": "dist/esm/index.js",
   "scripts": {
