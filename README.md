@@ -9,7 +9,6 @@ An APM solution based on metrics and open-source tools such as Prometheus and Gr
 3. [Options](#options)
 4. [Setup Locally](#setup-locally)
 5. [Grafana Dashboard View](#grafana-dashboard-view)
-6. [About Last9](#about-last9)
 
 ## Installation
 
