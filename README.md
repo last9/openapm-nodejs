@@ -1,7 +1,7 @@
 <a href="https://last9.io"><img src="https://last9.github.io/assets/last9-github-badge.svg" align="right" /></a>
 
 # @last9/openapm
-An Open-Source tool by Last9 to track NodeJS performance metrics using Prometheus. Track metrics like CPU usage, Garbage collection, Event loop lag and more.
+An APM solution based on metrics and open-source tools such as Prometheus and Grafana for NodeJs-based applications.
 
 ## Table of Contents
 1. [Installation](#installation)
