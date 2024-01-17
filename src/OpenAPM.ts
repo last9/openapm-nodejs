@@ -2,7 +2,6 @@ import * as os from 'os';
 import http from 'http';
 import ResponseTime from 'response-time';
 import promClient from 'prom-client';
-
 import type {
   Counter,
   CounterConfiguration,
@@ -266,7 +265,7 @@ export class OpenAPM extends LevitateEvents {
       // Skip the OPTIONS requests not to blow up cardinality. Express does not provide
       // information about the route for OPTIONS requests, which makes it very
       // hard to detect correct PATH. Until we fix it properly, the requests are skipped
-      // to not blow up the cardinality. 
+      // to not blow up the cardinality.
       if (!req.route && req.method === 'OPTIONS') {
         return;
       }
@@ -315,7 +314,7 @@ export class OpenAPM extends LevitateEvents {
       }
       if (moduleName === 'nestjs') {
         const { NestFactory } = require('@nestjs/core');
-        instrumentNestFactory(NestFactory, this._REDMiddleware);
+        instrumentNestFactory(NestFactory, this._REDMiddleware, this);
       }
     } catch (error) {
       if (Object.keys(moduleNames).includes(moduleName)) {
