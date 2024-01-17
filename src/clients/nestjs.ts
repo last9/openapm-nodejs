@@ -46,5 +46,20 @@ export const instrumentNestFactory = (
         };
       }
     );
+
+    const stopEvent = () => {
+      openapm.emit('application_stopped', {
+        timestamp: new Date().toISOString(),
+        event_name: `${openapm.program}_app`,
+        event_state: 'stop',
+        entity_type: 'app',
+        workspace: os.hostname(),
+        namespace: openapm.environment,
+        data_source_name: openapm.levitateConfig?.dataSourceName ?? ''
+      });
+    };
+
+    process.on('SIGINT', stopEvent);
+    process.on('SIGTERM', stopEvent);
   }
 };

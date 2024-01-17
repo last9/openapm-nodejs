@@ -2,7 +2,6 @@ import * as os from 'os';
 import http from 'http';
 import ResponseTime from 'response-time';
 import promClient from 'prom-client';
-
 import type {
   Counter,
   CounterConfiguration,

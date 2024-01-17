@@ -42,6 +42,10 @@ export class LevitateEvents extends EventEmitter {
     event: 'application_started',
     ...args: (DomainEventsBody | any)[]
   ): boolean;
+  public emit(
+    event: 'application_stopped',
+    ...args: (DomainEventsBody | any)[]
+  ): boolean;
   public emit(event: any, ...args: any[]): any {
     return super.emit(event, ...args);
   }
@@ -50,12 +54,20 @@ export class LevitateEvents extends EventEmitter {
     event: 'application_started',
     listener: (...args: (DomainEventsBody | any)[]) => void
   ): this;
+  public on(
+    event: 'application_stopped',
+    listener: (...args: (DomainEventsBody | any)[]) => void
+  ): this;
   public on(event: any, listener: (...args: any[]) => void): this {
     return super.on(event, listener);
   }
 
   public once(
     event: 'application_started',
+    listener: (...args: (DomainEventsBody | any)[]) => void
+  ): this;
+  public once(
+    event: 'application_stopped',
     listener: (...args: (DomainEventsBody | any)[]) => void
   ): this;
   public once(event: any, listener: (...args: any[]) => void): this {
