@@ -1,5 +1,6 @@
 import * as os from 'os';
 import http from 'http';
+import Debug from 'debug';
 import ResponseTime from 'response-time';
 import promClient from 'prom-client';
 
@@ -72,6 +73,7 @@ const moduleNames = {
 };
 
 const packageJson = getPackageJson();
+const debug = Debug('openapm:openapm');
 
 export class OpenAPM extends LevitateEvents {
   private path: string;
@@ -178,6 +180,7 @@ export class OpenAPM extends LevitateEvents {
 
   private initiateMetricsRoute = () => {
     // Creating native http server
+    debug('Creating the metrics server');
     this.metricsServer = http.createServer(async (req, res) => {
       // Sanitize the path
       const path = getSanitizedPath(req.url ?? '/');
@@ -192,6 +195,7 @@ export class OpenAPM extends LevitateEvents {
 
     // Start listening at the given port defaults to 9097
     this.metricsServer?.listen(this.metricsServerPort, () => {
+      debug('Listening for the metrics server');
       console.log(`Metrics server running at ${this.metricsServerPort}`);
     });
     process.on('SIGINT', this.gracefullyShutdownMetricsServer);
@@ -266,7 +270,7 @@ export class OpenAPM extends LevitateEvents {
       // Skip the OPTIONS requests not to blow up cardinality. Express does not provide
       // information about the route for OPTIONS requests, which makes it very
       // hard to detect correct PATH. Until we fix it properly, the requests are skipped
-      // to not blow up the cardinality. 
+      // to not blow up the cardinality.
       if (!req.route && req.method === 'OPTIONS') {
         return;
       }
@@ -307,14 +311,17 @@ export class OpenAPM extends LevitateEvents {
     try {
       if (moduleName === 'express') {
         const express = require('express');
+        debug('Instrumenting "express"');
         instrumentExpress(express, this._REDMiddleware, this);
       }
       if (moduleName === 'mysql') {
         const mysql2 = require('mysql2');
+        debug('Instrumenting "mysql2"');
         instrumentMySQL(mysql2);
       }
       if (moduleName === 'nestjs') {
         const { NestFactory } = require('@nestjs/core');
+        debug('Instrumenting "@nestjs/core"');
         instrumentNestFactory(NestFactory, this._REDMiddleware);
       }
     } catch (error) {
