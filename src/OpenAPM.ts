@@ -32,7 +32,13 @@ export type DefaultLabels =
   | 'version'
   | 'host';
 
+export type OpenAPMMode = 'openmetrics' | 'opentelemetry';
+
 export interface OpenAPMOptions {
+  /** Mode - openmetrics or opentelemetry
+   * @default "openmetrics"
+   */
+  mode?: OpenAPMMode;
   /** Route where the metrics will be exposed
    * @default "/metrics"
    */
@@ -70,6 +76,7 @@ const moduleNames = {
 const packageJson = getPackageJson();
 
 export class OpenAPM extends LevitateEvents {
+  private mode: string;
   private path: string;
   private metricsServerPort: number;
   readonly environment: string;
@@ -86,6 +93,9 @@ export class OpenAPM extends LevitateEvents {
 
   constructor(options?: OpenAPMOptions) {
     super(options);
+
+    this.mode = options?.mode ?? 'openmetrics';
+
     // Initializing all the options
     this.path = options?.path ?? '/metrics';
     this.metricsServerPort = options?.metricsServerPort ?? 9097;
@@ -118,8 +128,12 @@ export class OpenAPM extends LevitateEvents {
     this.extractLabels = options?.extractLabels ?? {};
     this.excludeDefaultLabels = options?.excludeDefaultLabels;
 
-    this.initiateMetricsRoute();
-    this.initiatePromClient();
+    if (this.mode === 'openmetrics') {
+      this.initiateMetricsRoute();
+      this.initiatePromClient();
+    } else {
+      console.log(this.mode + ' not supported');
+    }
   }
 
   private getDefaultLabels = () => {
@@ -274,28 +288,25 @@ export class OpenAPM extends LevitateEvents {
         ...parsedLabelsFromPathname
       };
 
-      // Create an array of arguments in the same sequence as label names
-      const requestsCounterArgs = this.requestsCounterConfig.labelNames?.map(
-        (labelName) => {
-          return labels[labelName] ?? '';
-        }
-      );
+      if (this.mode === 'openmetrics') {
+        // Create an array of arguments in the same sequence as label names
+        const requestsCounterArgs = this.requestsCounterConfig.labelNames?.map(
+          (labelName) => {
+            return labels[labelName] ?? '';
+          }
+        );
 
-      if (requestsCounterArgs) {
-        this.requestsCounter?.labels(...requestsCounterArgs).inc();
-        this.requestsDurationHistogram
-          ?.labels(...requestsCounterArgs)
-          .observe(time);
+        if (requestsCounterArgs) {
+          this.requestsCounter?.labels(...requestsCounterArgs).inc();
+          this.requestsDurationHistogram
+            ?.labels(...requestsCounterArgs)
+            .observe(time);
+        }
+      } else {
+        console.log(this.mode + ' is not supported');
       }
     }
   );
-
-  /**
-   * Middleware Function, which is essentially the response-time middleware with a callback that captures the
-   * metrics
-   * @deprecated
-   */
-  public REDMiddleware = this._REDMiddleware;
 
   public instrument(moduleName: SupportedModules) {
     try {
@@ -305,7 +316,7 @@ export class OpenAPM extends LevitateEvents {
       }
       if (moduleName === 'mysql') {
         const mysql2 = require('mysql2');
-        instrumentMySQL(mysql2);
+        instrumentMySQL(mysql2, this.mode);
       }
       if (moduleName === 'nestjs') {
         const { NestFactory } = require('@nestjs/core');
