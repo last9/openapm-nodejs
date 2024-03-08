@@ -72,3 +72,21 @@ app.all('/api/v1/slug/:slug', (req, res) => {
 const server = app.listen(3000, () => {
   console.log('serving at 3000');
 });
+
+const gracefullyShutdownServer = () => {
+  server.close(() => {
+    openapm
+      .shutdown()
+      .then(() => {
+        console.log('Server gracefully shutdown');
+        process.exit(0);
+      })
+      .catch((err) => {
+        console.log(err);
+        process.exit(1);
+      });
+  });
+};
+
+process.on('SIGINT', gracefullyShutdownServer);
+process.on('SIGTERM', gracefullyShutdownServer);
