@@ -53,10 +53,6 @@ export interface OpenAPMOptions {
   requestDurationHistogramConfig?: HistogramConfiguration<string>;
   /** Extract labels from URL params, subdomain, header */
   extractLabels?: Record<string, ExtractFromParams>;
-  /**
-   * @deprecated This option is deprecated and won't have any impact on masking the pathnames.
-   * */
-  customPathsToMask?: Array<RegExp>;
   /** Skip mentioned labels */
   excludeDefaultLabels?: Array<DefaultLabels>;
   /** Levitate Config */
@@ -84,7 +80,6 @@ export class OpenAPM extends LevitateEvents {
   private requestsCounter?: Counter;
   private requestsDurationHistogram?: Histogram;
   private extractLabels?: Record<string, ExtractFromParams>;
-  private customPathsToMask?: Array<RegExp>;
   private excludeDefaultLabels?: Array<DefaultLabels>;
 
   public metricsServer?: Server;
@@ -121,7 +116,6 @@ export class OpenAPM extends LevitateEvents {
       };
 
     this.extractLabels = options?.extractLabels ?? {};
-    this.customPathsToMask = options?.customPathsToMask;
     this.excludeDefaultLabels = options?.excludeDefaultLabels;
 
     this.initiateMetricsRoute();
@@ -266,7 +260,7 @@ export class OpenAPM extends LevitateEvents {
       // Skip the OPTIONS requests not to blow up cardinality. Express does not provide
       // information about the route for OPTIONS requests, which makes it very
       // hard to detect correct PATH. Until we fix it properly, the requests are skipped
-      // to not blow up the cardinality. 
+      // to not blow up the cardinality.
       if (!req.route && req.method === 'OPTIONS') {
         return;
       }
