@@ -9,7 +9,7 @@ var { OpenAPM } = require('../dist/index.js');
 var mysql2 = require('mysql2');
 
 const openapm = new OpenAPM({
-  // mode: 'opentelemetry',
+  mode: 'opentelemetry',
   extractLabels: {
     tenant: {
       from: 'params',
@@ -29,7 +29,7 @@ const openapm = new OpenAPM({
 });
 
 openapm.instrument('express');
-openapm.instrument('mysql');
+// openapm.instrument('mysql');
 
 const app = express();
 

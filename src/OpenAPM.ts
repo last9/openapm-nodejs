@@ -2,6 +2,26 @@ import * as os from 'os';
 import http from 'http';
 import ResponseTime from 'response-time';
 import promClient from 'prom-client';
+import opentelemetry from '@opentelemetry/api';
+const {
+  DiagConsoleLogger,
+  DiagLogLevel,
+  diag,
+  metrics
+} = require('@opentelemetry/api');
+const {
+  OTLPMetricExporter
+} = require('@opentelemetry/exporter-metrics-otlp-http');
+const {
+  MeterProvider,
+  PeriodicExportingMetricReader,
+  ConsoleMetricExporter
+} = require('@opentelemetry/sdk-metrics');
+import { Resource } from '@opentelemetry/resources';
+import {
+  SEMRESATTRS_SERVICE_NAME,
+  SEMRESATTRS_SERVICE_VERSION
+} from '@opentelemetry/semantic-conventions';
 
 import type {
   Counter,
@@ -53,9 +73,9 @@ export interface OpenAPMOptions {
   environment?: string;
   /** Any default labels you want to include */
   defaultLabels?: Record<string, string>;
-  /** Accepts configuration for Prometheus Counter  */
+  /** Accepts configuration for Requests Counter  */
   requestsCounterConfig?: CounterConfiguration<string>;
-  /** Accepts configuration for Prometheus Histogram */
+  /** Accepts configuration for Requests Histogram */
   requestDurationHistogramConfig?: HistogramConfiguration<string>;
   /** Extract labels from URL params, subdomain, header */
   extractLabels?: Record<string, ExtractFromParams>;
@@ -66,6 +86,9 @@ export interface OpenAPMOptions {
 }
 
 export type SupportedModules = 'express' | 'mysql' | 'nestjs';
+
+// Optional and only needed to see the internal diagnostic logging (during development)
+diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.DEBUG);
 
 const moduleNames = {
   express: 'express',
@@ -82,9 +105,10 @@ export class OpenAPM extends LevitateEvents {
   readonly environment: string;
   readonly program: string;
   private defaultLabels?: Record<string, string>;
-  private requestsCounterConfig: CounterConfiguration<string>;
+  private openMetricsRequestsCounterConfig: CounterConfiguration<string>;
   private requestDurationHistogramConfig: HistogramConfiguration<string>;
-  private requestsCounter?: Counter;
+  private openMetricsRequestsCounter?: Counter;
+  private otelRequestsCounter?: any;
   private requestsDurationHistogram?: Histogram;
   private extractLabels?: Record<string, ExtractFromParams>;
   private excludeDefaultLabels?: Array<DefaultLabels>;
@@ -102,7 +126,7 @@ export class OpenAPM extends LevitateEvents {
     this.environment = options?.environment ?? 'production';
     this.program = packageJson?.name ?? '';
     this.defaultLabels = options?.defaultLabels;
-    this.requestsCounterConfig = options?.requestsCounterConfig ?? {
+    this.openMetricsRequestsCounterConfig = options?.requestsCounterConfig ?? {
       name: 'http_requests_total',
       help: 'Total number of requests',
       labelNames: [
@@ -131,6 +155,32 @@ export class OpenAPM extends LevitateEvents {
     if (this.mode === 'openmetrics') {
       this.initiateMetricsRoute();
       this.initiatePromClient();
+    } else if (this.mode === 'opentelemetry') {
+      const resource = Resource.default().merge(
+        new Resource({
+          [SEMRESATTRS_SERVICE_NAME]: this.program,
+          [SEMRESATTRS_SERVICE_VERSION]: packageJson.version
+        })
+      );
+
+      const metricReader = new PeriodicExportingMetricReader({
+        exporter: new ConsoleMetricExporter(),
+        // Default is 60000ms (60 seconds). Set to 10 seconds for demonstrative purposes only.
+        exportIntervalMillis: 10000
+      });
+
+      const meterProvider = new MeterProvider({
+        resource: resource,
+        readers: [metricReader]
+      });
+
+      // Set this MeterProvider to be global to the app being instrumented.
+      metrics.setGlobalMeterProvider(meterProvider);
+      const meter = meterProvider.getMeter('openapm-collector');
+
+      this.otelRequestsCounter = meter.createCounter('http_requests_total', {
+        description: 'Total number of requests'
+      });
     } else {
       console.log(this.mode + ' not supported');
     }
@@ -163,7 +213,9 @@ export class OpenAPM extends LevitateEvents {
     });
 
     // Initiate the Counter for the requests
-    this.requestsCounter = new promClient.Counter(this.requestsCounterConfig);
+    this.openMetricsRequestsCounter = new promClient.Counter(
+      this.openMetricsRequestsCounterConfig
+    );
     // Initiate the Duration Histogram for the requests
     this.requestsDurationHistogram = new promClient.Histogram(
       this.requestDurationHistogramConfig
@@ -290,18 +342,21 @@ export class OpenAPM extends LevitateEvents {
 
       if (this.mode === 'openmetrics') {
         // Create an array of arguments in the same sequence as label names
-        const requestsCounterArgs = this.requestsCounterConfig.labelNames?.map(
-          (labelName) => {
+        const openMetricsRequestsCounterArgs =
+          this.openMetricsRequestsCounterConfig.labelNames?.map((labelName) => {
             return labels[labelName] ?? '';
-          }
-        );
+          });
 
-        if (requestsCounterArgs) {
-          this.requestsCounter?.labels(...requestsCounterArgs).inc();
+        if (openMetricsRequestsCounterArgs) {
+          this.openMetricsRequestsCounter
+            ?.labels(...openMetricsRequestsCounterArgs)
+            .inc();
           this.requestsDurationHistogram
-            ?.labels(...requestsCounterArgs)
+            ?.labels(...openMetricsRequestsCounterArgs)
             .observe(time);
         }
+      } else if (this.mode === 'opentelemetry') {
+        this.otelRequestsCounter.add(1, labels);
       } else {
         console.log(this.mode + ' is not supported');
       }
