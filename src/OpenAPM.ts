@@ -2,21 +2,17 @@ import * as os from 'os';
 import http from 'http';
 import ResponseTime from 'response-time';
 import promClient from 'prom-client';
-import opentelemetry from '@opentelemetry/api';
-const {
+import {
   DiagConsoleLogger,
   DiagLogLevel,
   diag,
   metrics
-} = require('@opentelemetry/api');
-const {
-  OTLPMetricExporter
-} = require('@opentelemetry/exporter-metrics-otlp-http');
-const {
+} from '@opentelemetry/api';
+import {
   MeterProvider,
   PeriodicExportingMetricReader,
   ConsoleMetricExporter
-} = require('@opentelemetry/sdk-metrics');
+} from '@opentelemetry/sdk-metrics';
 import { Resource } from '@opentelemetry/resources';
 import {
   SEMRESATTRS_SERVICE_NAME,
@@ -38,6 +34,7 @@ import { instrumentExpress } from './clients/express';
 import { instrumentMySQL } from './clients/mysql2';
 import { instrumentNestFactory } from './clients/nestjs';
 import { LevitateConfig, LevitateEvents } from './levitate/events';
+import { PrometheusRemoteWriteExporter } from './exporter/prometheus-remote-write';
 
 export type ExtractFromParams = {
   from: 'params';
@@ -164,7 +161,7 @@ export class OpenAPM extends LevitateEvents {
       );
 
       const metricReader = new PeriodicExportingMetricReader({
-        exporter: new ConsoleMetricExporter(),
+        exporter: new PrometheusRemoteWriteExporter(),
         // Default is 60000ms (60 seconds). Set to 10 seconds for demonstrative purposes only.
         exportIntervalMillis: 10000
       });
