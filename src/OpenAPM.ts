@@ -5,6 +5,7 @@ import promClient from 'prom-client';
 import {
   DiagConsoleLogger,
   DiagLogLevel,
+  Meter,
   diag,
   metrics
 } from '@opentelemetry/api';
@@ -34,7 +35,6 @@ import { instrumentExpress } from './clients/express';
 import { instrumentMySQL } from './clients/mysql2';
 import { instrumentNestFactory } from './clients/nestjs';
 import { LevitateConfig, LevitateEvents } from './levitate/events';
-import { PrometheusRemoteWriteExporter } from './exporter/prometheus-remote-write';
 
 export type ExtractFromParams = {
   from: 'params';
@@ -104,9 +104,14 @@ export class OpenAPM extends LevitateEvents {
   private defaultLabels?: Record<string, string>;
   private openMetricsRequestsCounterConfig: CounterConfiguration<string>;
   private requestDurationHistogramConfig: HistogramConfiguration<string>;
-  private openMetricsRequestsCounter?: Counter;
-  private otelRequestsCounter?: any;
-  private requestsDurationHistogram?: Histogram;
+  private openMetricsMeters: {
+    requestsCounter?: Counter;
+    requestsDurationHistogram?: Histogram;
+  };
+  private openTelemetryMeters?: {
+    requestsCounter?: ReturnType<Meter['createCounter']>;
+    requestsDurationHistogram?: ReturnType<Meter['createHistogram']>;
+  };
   private extractLabels?: Record<string, ExtractFromParams>;
   private excludeDefaultLabels?: Array<DefaultLabels>;
 
@@ -146,6 +151,9 @@ export class OpenAPM extends LevitateEvents {
         buckets: promClient.exponentialBuckets(0.25, 1.5, 31)
       };
 
+    this.openMetricsMeters = {};
+    this.openTelemetryMeters = {};
+
     this.extractLabels = options?.extractLabels ?? {};
     this.excludeDefaultLabels = options?.excludeDefaultLabels;
 
@@ -161,7 +169,7 @@ export class OpenAPM extends LevitateEvents {
       );
 
       const metricReader = new PeriodicExportingMetricReader({
-        exporter: new PrometheusRemoteWriteExporter(),
+        exporter: new ConsoleMetricExporter(),
         // Default is 60000ms (60 seconds). Set to 10 seconds for demonstrative purposes only.
         exportIntervalMillis: 10000
       });
@@ -175,9 +183,17 @@ export class OpenAPM extends LevitateEvents {
       metrics.setGlobalMeterProvider(meterProvider);
       const meter = meterProvider.getMeter('openapm-collector');
 
-      this.otelRequestsCounter = meter.createCounter('http_requests_total', {
-        description: 'Total number of requests'
-      });
+      this.openTelemetryMeters['requestsCounter'] = meter.createCounter(
+        'http_requests_total',
+        {
+          description: 'Total number of requests'
+        }
+      );
+
+      this.openTelemetryMeters['requestsDurationHistogram'] =
+        meter.createHistogram('http_requests_duration_milliseconds', {
+          description: 'Duration of HTTP requests in milliseconds'
+        });
     } else {
       console.log(this.mode + ' not supported');
     }
@@ -210,13 +226,12 @@ export class OpenAPM extends LevitateEvents {
     });
 
     // Initiate the Counter for the requests
-    this.openMetricsRequestsCounter = new promClient.Counter(
+    this.openMetricsMeters['requestsCounter'] = new promClient.Counter(
       this.openMetricsRequestsCounterConfig
     );
     // Initiate the Duration Histogram for the requests
-    this.requestsDurationHistogram = new promClient.Histogram(
-      this.requestDurationHistogramConfig
-    );
+    this.openMetricsMeters['requestsDurationHistogram'] =
+      new promClient.Histogram(this.requestDurationHistogramConfig);
   };
 
   private gracefullyShutdownMetricsServer = () => {
@@ -345,15 +360,19 @@ export class OpenAPM extends LevitateEvents {
           });
 
         if (openMetricsRequestsCounterArgs) {
-          this.openMetricsRequestsCounter
+          this.openMetricsMeters.requestsCounter
             ?.labels(...openMetricsRequestsCounterArgs)
             .inc();
-          this.requestsDurationHistogram
+          this.openMetricsMeters.requestsDurationHistogram
             ?.labels(...openMetricsRequestsCounterArgs)
             .observe(time);
         }
       } else if (this.mode === 'opentelemetry') {
-        this.otelRequestsCounter.add(1, labels);
+        this.openTelemetryMeters?.['requestsCounter']?.add(1, labels);
+        this.openTelemetryMeters?.['requestsDurationHistogram']?.record(
+          time,
+          labels
+        );
       } else {
         console.log(this.mode + ' is not supported');
       }
