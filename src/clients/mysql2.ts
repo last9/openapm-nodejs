@@ -293,7 +293,7 @@ export const instrumentMySQL = (
     createPool: typeof createPool;
     createPoolCluster: typeof createPoolCluster;
   },
-  mode: OpenAPMMode
+  mode: string
 ) => {
   if (mode === 'opentelemetry') {
     console.log('opentelemetry is not supported for mysql instrumentation');

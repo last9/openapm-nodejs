@@ -11,9 +11,12 @@ import {
 } from '@opentelemetry/api';
 import {
   MeterProvider,
-  PeriodicExportingMetricReader,
-  ConsoleMetricExporter
+  PeriodicExportingMetricReader
 } from '@opentelemetry/sdk-metrics';
+import {
+  OTLPMetricExporter,
+  OTLPMetricExporterOptions
+} from '@opentelemetry/exporter-metrics-otlp-http';
 import { Resource } from '@opentelemetry/resources';
 import {
   SEMRESATTRS_SERVICE_NAME,
@@ -56,6 +59,10 @@ export interface OpenAPMOptions {
    * @default "openmetrics"
    */
   mode?: OpenAPMMode;
+  /**
+   *
+   */
+  otlpMetricExporterOptions?: OTLPMetricExporterOptions;
   /** Route where the metrics will be exposed
    * @default "/metrics"
    */
@@ -97,6 +104,7 @@ const packageJson = getPackageJson();
 
 export class OpenAPM extends LevitateEvents {
   private mode: string;
+  private otlpMetricExporterOptions?: OTLPMetricExporterOptions;
   private path: string;
   private metricsServerPort: number;
   readonly environment: string;
@@ -122,6 +130,9 @@ export class OpenAPM extends LevitateEvents {
 
     this.mode = options?.mode ?? 'openmetrics';
 
+    if (this.mode === 'opentelemetry') {
+      this.otlpMetricExporterOptions = options?.otlpMetricExporterOptions;
+    }
     // Initializing all the options
     this.path = options?.path ?? '/metrics';
     this.metricsServerPort = options?.metricsServerPort ?? 9097;
@@ -169,7 +180,7 @@ export class OpenAPM extends LevitateEvents {
       );
 
       const metricReader = new PeriodicExportingMetricReader({
-        exporter: new ConsoleMetricExporter(),
+        exporter: new OTLPMetricExporter(this.otlpMetricExporterOptions),
         // Default is 60000ms (60 seconds). Set to 10 seconds for demonstrative purposes only.
         exportIntervalMillis: 10000
       });
