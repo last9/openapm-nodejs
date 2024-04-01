@@ -5,11 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.7.0] - 2024-03-11
+## [0.7.0] - 2024-04-01
 
-### Breaking Change
+### Added
 
-- The metrics server will not close automatically when the application is shutting down. You need to call `shutdown` method explicitly to close the server and clean up the resources.
+- **BREAKING** The OpenAPM metrics server will not close automatically when the application shuts down. Call the `shutdown` function explicitly to shut down OpenAPM.
 
 ## [0.6.1] - 2023-12-26
 
@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Ability to automatically detect correct `path` labels based on routes defined by users in their applications. This will solve the cardinality blowup of endpoints not being folded correctly.
+- The ability to automatically detect the correct `path` labels based on routes defined by users in their applications. This will solve the cardinality blowup of endpoints not being folded correctly.
 
 ### Deprecated
 
@@ -43,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Migrate from Rollup to tsup for building package.
+- Migrate from `Rollup` to `tsup` for building package.
 
 ## [0.3.0] - 2023-10-9
 
