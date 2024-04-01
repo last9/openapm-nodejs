@@ -35,6 +35,7 @@ import { instrumentExpress } from './clients/express';
 import { instrumentMySQL } from './clients/mysql2';
 import { instrumentNestFactory } from './clients/nestjs';
 import { LevitateConfig, LevitateEvents } from './levitate/events';
+import { OTLPMetricExporterOptions } from '@opentelemetry/exporter-metrics-otlp-http';
 
 export type ExtractFromParams = {
   from: 'params';
@@ -80,6 +81,8 @@ export interface OpenAPMOptions {
   excludeDefaultLabels?: Array<DefaultLabels>;
   /** Levitate Config */
   levitateConfig?: LevitateConfig;
+  /** OTLP Metrics exporter option */
+  otlpMetricExporterOptions?: OTLPMetricExporterOptions;
 }
 
 export type SupportedModules = 'express' | 'mysql' | 'nestjs';
@@ -114,6 +117,7 @@ export class OpenAPM extends LevitateEvents {
   };
   private extractLabels?: Record<string, ExtractFromParams>;
   private excludeDefaultLabels?: Array<DefaultLabels>;
+  private otlpMetricExporterOptions?: OTLPMetricExporterOptions;
 
   public metricsServer?: Server;
 
@@ -153,6 +157,8 @@ export class OpenAPM extends LevitateEvents {
 
     this.openMetricsMeters = {};
     this.openTelemetryMeters = {};
+
+    this.otlpMetricExporterOptions = options?.otlpMetricExporterOptions;
 
     this.extractLabels = options?.extractLabels ?? {};
     this.excludeDefaultLabels = options?.excludeDefaultLabels;
