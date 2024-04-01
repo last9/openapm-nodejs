@@ -162,17 +162,20 @@ export class OpenAPM extends LevitateEvents {
     );
   };
 
-  private gracefullyShutdownMetricsServer = () => {
-    this.metricsServer?.close((err) => {
-      promClient.register.clear();
-      console.log('Shutting down metrics server.');
-      if (err) {
-        console.error('Error while shutting down the metrics server:', err);
-        process.exit(1);
-      } else {
+  public shutdown = async () => {
+    return new Promise((resolve, reject) => {
+      console.log('Shutting down metrics server gracefully.');
+      this.metricsServer?.close((err) => {
+        promClient.register.clear();
+
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        resolve(undefined);
         console.log('Metrics server shut down gracefully.');
-        process.exit(0);
-      }
+      });
     });
   };
 
@@ -194,8 +197,6 @@ export class OpenAPM extends LevitateEvents {
     this.metricsServer?.listen(this.metricsServerPort, () => {
       console.log(`Metrics server running at ${this.metricsServerPort}`);
     });
-    process.on('SIGINT', this.gracefullyShutdownMetricsServer);
-    process.on('SIGTERM', this.gracefullyShutdownMetricsServer);
   };
 
   private parseLabelsFromParams = (
@@ -266,7 +267,7 @@ export class OpenAPM extends LevitateEvents {
       // Skip the OPTIONS requests not to blow up cardinality. Express does not provide
       // information about the route for OPTIONS requests, which makes it very
       // hard to detect correct PATH. Until we fix it properly, the requests are skipped
-      // to not blow up the cardinality. 
+      // to not blow up the cardinality.
       if (!req.route && req.method === 'OPTIONS') {
         return;
       }
