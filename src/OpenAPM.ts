@@ -177,7 +177,8 @@ export class OpenAPM extends LevitateEvents {
       const metricReader = new PeriodicExportingMetricReader({
         exporter: new OTLPMetricExporter(this.otlpMetricExporterOptions),
         // Default is 60000ms (60 seconds). Set to 10 seconds for demonstrative purposes only.
-        exportIntervalMillis: process.env.OTLP_EXPORT_TIMEOUT
+        exportIntervalMillis: 10000,
+        exportTimeoutMillis: process.env.OTLP_EXPORT_TIMEOUT
           ? parseInt(process.env.OTLP_EXPORT_TIMEOUT)
           : 10000
       });
