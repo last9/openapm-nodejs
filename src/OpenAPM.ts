@@ -243,17 +243,20 @@ export class OpenAPM extends LevitateEvents {
       new promClient.Histogram(this.requestDurationHistogramConfig);
   };
 
-  private gracefullyShutdownMetricsServer = () => {
-    this.metricsServer?.close((err) => {
-      promClient.register.clear();
-      console.log('Shutting down metrics server.');
-      if (err) {
-        console.error('Error while shutting down the metrics server:', err);
-        process.exit(1);
-      } else {
+  public shutdown = async () => {
+    return new Promise((resolve, reject) => {
+      console.log('Shutting down metrics server gracefully.');
+      this.metricsServer?.close((err) => {
+        promClient.register.clear();
+
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        resolve(undefined);
         console.log('Metrics server shut down gracefully.');
-        process.exit(0);
-      }
+      });
     });
   };
 
@@ -275,8 +278,6 @@ export class OpenAPM extends LevitateEvents {
     this.metricsServer?.listen(this.metricsServerPort, () => {
       console.log(`Metrics server running at ${this.metricsServerPort}`);
     });
-    process.on('SIGINT', this.gracefullyShutdownMetricsServer);
-    process.on('SIGTERM', this.gracefullyShutdownMetricsServer);
   };
 
   private parseLabelsFromParams = (
