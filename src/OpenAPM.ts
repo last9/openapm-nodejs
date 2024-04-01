@@ -111,6 +111,7 @@ export class OpenAPM extends LevitateEvents {
     requestsCounter?: Counter;
     requestsDurationHistogram?: Histogram;
   };
+  private otelMeterProvider?: MeterProvider;
   private openTelemetryMeters?: {
     requestsCounter?: ReturnType<Meter['createCounter']>;
     requestsDurationHistogram?: ReturnType<Meter['createHistogram']>;
@@ -183,14 +184,14 @@ export class OpenAPM extends LevitateEvents {
           : 10000
       });
 
-      const meterProvider = new MeterProvider({
+      this.otelMeterProvider = new MeterProvider({
         resource: resource,
         readers: [metricReader]
       });
 
       // Set this MeterProvider to be global to the app being instrumented.
-      metrics.setGlobalMeterProvider(meterProvider);
-      const meter = meterProvider.getMeter('openapm-collector');
+      metrics.setGlobalMeterProvider(this.otelMeterProvider);
+      const meter = this.otelMeterProvider.getMeter('openapm-collector');
 
       this.openTelemetryMeters['requestsCounter'] = meter.createCounter(
         'http_requests_total',
@@ -246,9 +247,10 @@ export class OpenAPM extends LevitateEvents {
   public shutdown = async () => {
     return new Promise((resolve, reject) => {
       if (this.mode === 'opentelemetry') {
-        this.openMetricsMeters.requestsCounter?.reset();
-        this.openMetricsMeters.requestsDurationHistogram?.reset();
-        resolve(undefined);
+        this.otelMeterProvider?.shutdown().then(() => {
+          console.log('Shutting down OpenTelemetry gracefully.');
+          resolve(undefined);
+        });
       } else {
         console.log('Shutting down metrics server gracefully.');
         this.metricsServer?.close((err) => {
