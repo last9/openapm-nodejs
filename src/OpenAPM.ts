@@ -245,18 +245,22 @@ export class OpenAPM extends LevitateEvents {
 
   public shutdown = async () => {
     return new Promise((resolve, reject) => {
-      console.log('Shutting down metrics server gracefully.');
-      this.metricsServer?.close((err) => {
-        promClient.register.clear();
-
-        if (err) {
-          reject(err);
-          return;
-        }
-
+      if (this.mode === 'opentelemetry') {
+        this.openMetricsMeters.requestsCounter?.reset();
+        this.openMetricsMeters.requestsDurationHistogram?.reset();
         resolve(undefined);
-        console.log('Metrics server shut down gracefully.');
-      });
+      } else {
+        console.log('Shutting down metrics server gracefully.');
+        this.metricsServer?.close((err) => {
+          promClient.register.clear();
+
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve(undefined);
+        });
+      }
     });
   };
 
