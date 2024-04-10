@@ -25,7 +25,10 @@ const openapm = new OpenAPM({
     }
   },
   customPathsToMask: [/\b\d+(?:,\d+)*\b/gm],
-  excludeDefaultLabels: ['host', 'program']
+  excludeDefaultLabels: ['host', 'program'],
+  periodicExportingMetricReaderOptions: {
+    exportTimeoutMillis: 60000
+  }
 });
 
 openapm.instrument('express');

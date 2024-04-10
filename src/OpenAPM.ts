@@ -11,7 +11,8 @@ import {
 } from '@opentelemetry/api';
 import {
   MeterProvider,
-  PeriodicExportingMetricReader
+  PeriodicExportingMetricReader,
+  PeriodicExportingMetricReaderOptions
 } from '@opentelemetry/sdk-metrics';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-proto';
 import { Resource } from '@opentelemetry/resources';
@@ -83,6 +84,11 @@ export interface OpenAPMOptions {
   levitateConfig?: LevitateConfig;
   /** OTLP Metrics exporter option */
   otlpMetricExporterOptions?: OTLPMetricExporterOptions;
+  /** Periodic Exporting Metric Reader Options */
+  periodicExportingMetricReaderOptions?: Omit<
+    PeriodicExportingMetricReaderOptions,
+    'exporter'
+  >;
 }
 
 export type SupportedModules = 'express' | 'mysql' | 'nestjs';
@@ -119,6 +125,10 @@ export class OpenAPM extends LevitateEvents {
   private extractLabels?: Record<string, ExtractFromParams>;
   private excludeDefaultLabels?: Array<DefaultLabels>;
   private otlpMetricExporterOptions?: OTLPMetricExporterOptions;
+  private periodicExportingMetricReaderOptions?: Omit<
+    PeriodicExportingMetricReaderOptions,
+    'exporter'
+  >;
 
   public metricsServer?: Server;
 
@@ -160,6 +170,8 @@ export class OpenAPM extends LevitateEvents {
     this.openTelemetryMeters = {};
 
     this.otlpMetricExporterOptions = options?.otlpMetricExporterOptions;
+    this.periodicExportingMetricReaderOptions =
+      options?.periodicExportingMetricReaderOptions ?? {};
 
     this.extractLabels = options?.extractLabels ?? {};
     this.excludeDefaultLabels = options?.excludeDefaultLabels;
@@ -176,12 +188,8 @@ export class OpenAPM extends LevitateEvents {
       );
 
       const metricReader = new PeriodicExportingMetricReader({
-        exporter: new OTLPMetricExporter(this.otlpMetricExporterOptions),
-        // Default is 60000ms (60 seconds). Set to 10 seconds for demonstrative purposes only.
-        exportIntervalMillis: 10000,
-        exportTimeoutMillis: process.env.OTLP_EXPORT_TIMEOUT
-          ? parseInt(process.env.OTLP_EXPORT_TIMEOUT)
-          : 10000
+        ...this.periodicExportingMetricReaderOptions,
+        exporter: new OTLPMetricExporter(this.otlpMetricExporterOptions)
       });
 
       this.otelMeterProvider = new MeterProvider({
