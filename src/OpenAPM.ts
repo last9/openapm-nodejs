@@ -186,7 +186,22 @@ export class OpenAPM extends LevitateEvents {
       const path = getSanitizedPath(req.url ?? '/');
       if (path === this.path && req.method === 'GET') {
         res.setHeader('Content-Type', promClient.register.contentType);
-        return res.end(await promClient.register.metrics());
+        let prisma = undefined;
+        try {
+          // If Prisma is present, pick up those metrics as well
+          prisma = require('prisma');
+        } catch {
+          console.log(
+            'Prisma monitoring is not enabled as Prisma is not installed.'
+          );
+        }
+        const prismaMetrics = prisma
+          ? await prisma.$metrics.prometheus()
+          : undefined;
+
+        const promClientMetrics = await promClient.register.metrics();
+
+        return res.end(prismaMetrics + promClientMetrics);
       } else {
         res.statusCode = 404;
         res.end('404 Not found');
