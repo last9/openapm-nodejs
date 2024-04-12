@@ -9,6 +9,6 @@ export default defineConfig({
   minify: true,
   treeshake: true,
   shims: true,
-  external: ['mysql2', '@nestjs/core'],
+  external: ['mysql2', '@nestjs/core', 'next', 'express', 'webpack'],
   dts: true
 });

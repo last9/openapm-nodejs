@@ -17,6 +17,7 @@ import { getHostIpAddress, getPackageJson, getSanitizedPath } from './utils';
 import { instrumentExpress } from './clients/express';
 import { instrumentMySQL } from './clients/mysql2';
 import { instrumentNestFactory } from './clients/nestjs';
+import { instrumentNextjs } from './clients/nextjs';
 import { LevitateConfig, LevitateEvents } from './levitate/events';
 
 export type ExtractFromParams = {
@@ -63,12 +64,13 @@ export interface OpenAPMOptions {
   levitateConfig?: LevitateConfig;
 }
 
-export type SupportedModules = 'express' | 'mysql' | 'nestjs';
+export type SupportedModules = 'express' | 'mysql' | 'nestjs' | 'nextjs';
 
 const moduleNames = {
   express: 'express',
   mysql: 'mysql2',
-  nestjs: '@nestjs/core'
+  nestjs: '@nestjs/core',
+  nextjs: 'next'
 };
 
 const packageJson = getPackageJson();
@@ -317,6 +319,10 @@ export class OpenAPM extends LevitateEvents {
       if (moduleName === 'nestjs') {
         const { NestFactory } = require('@nestjs/core');
         instrumentNestFactory(NestFactory, this._REDMiddleware);
+      }
+      if (moduleName === 'nextjs') {
+        let nextjs = require('next');
+        instrumentNextjs({ next: nextjs }, this);
       }
     } catch (error) {
       if (Object.keys(moduleNames).includes(moduleName)) {
