@@ -190,8 +190,14 @@ export class OpenAPM extends LevitateEvents {
         try {
           // TODO: Make prisma implementation more generic so that it can be used with other ORMs, DBs and libraries
           const prisma = require('prisma');
-          metrics += prisma ? await prisma.$metrics.prometheus() : undefined;
-        } catch {}
+          const prismaMetrics = prisma
+            ? await prisma.$metrics.prometheus()
+            : '';
+          console.log(prismaMetrics);
+          metrics += prisma ? prismaMetrics : '';
+        } catch {
+          console.log('Prisma is not installed');
+        }
 
         metrics += await promClient.register.metrics();
 
