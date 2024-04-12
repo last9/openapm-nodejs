@@ -186,22 +186,16 @@ export class OpenAPM extends LevitateEvents {
       const path = getSanitizedPath(req.url ?? '/');
       if (path === this.path && req.method === 'GET') {
         res.setHeader('Content-Type', promClient.register.contentType);
-        let prisma = undefined;
+        let metrics = '';
         try {
-          // If Prisma is present, pick up those metrics as well
-          prisma = require('prisma');
-        } catch {
-          console.log(
-            'Prisma monitoring is not enabled as Prisma is not installed.'
-          );
-        }
-        const prismaMetrics = prisma
-          ? await prisma.$metrics.prometheus()
-          : undefined;
+          // TODO: Make prisma implementation more generic so that it can be used with other ORMs, DBs and libraries
+          const prisma = require('prisma');
+          metrics += prisma ? await prisma.$metrics.prometheus() : undefined;
+        } catch {}
 
-        const promClientMetrics = await promClient.register.metrics();
+        metrics += await promClient.register.metrics();
 
-        return res.end(prismaMetrics + promClientMetrics);
+        return res.end(metrics);
       } else {
         res.statusCode = 404;
         res.end('404 Not found');
@@ -288,7 +282,12 @@ export class OpenAPM extends LevitateEvents {
       }
 
       // Make sure you copy baseURL in case of nested routes.
-      const path = req.route ? req.baseUrl + req.route?.path : pathname;
+      const path = req.route
+        ? req.route?.path !== '*'
+          ? req.baseUrl + req.route?.path
+          : pathname
+        : pathname;
+
       const labels: Record<string, string> = {
         path: path,
         status: res.statusCode.toString(),
