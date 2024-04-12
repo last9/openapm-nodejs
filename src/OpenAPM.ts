@@ -196,8 +196,8 @@ export class OpenAPM extends LevitateEvents {
             : '';
           console.log(prismaMetrics);
           metrics += prisma ? prismaMetrics : '';
-        } catch {
-          console.log('Prisma is not installed');
+        } catch (error) {
+          console.log(error, 'Prisma metrics could not be fetched');
         }
 
         metrics += await promClient.register.metrics();
