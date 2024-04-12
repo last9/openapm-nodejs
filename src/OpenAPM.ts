@@ -74,6 +74,7 @@ const moduleNames = {
 const packageJson = getPackageJson();
 
 export class OpenAPM extends LevitateEvents {
+  private simpleCache: Record<string, any> = {};
   private path: string;
   private metricsServerPort: number;
   readonly environment: string;
@@ -187,17 +188,21 @@ export class OpenAPM extends LevitateEvents {
       if (path === this.path && req.method === 'GET') {
         res.setHeader('Content-Type', promClient.register.contentType);
         let metrics = '';
-        try {
-          // TODO: Make prisma implementation more generic so that it can be used with other ORMs, DBs and libraries
-          const { PrismaClient } = require('@prisma/client');
-          const prisma = new PrismaClient();
-          const prismaMetrics = prisma
-            ? await prisma.$metrics.prometheus()
-            : '';
-          console.log(prismaMetrics);
-          metrics += prisma ? prismaMetrics : '';
-        } catch (error) {
-          console.log(error, 'Prisma metrics could not be fetched');
+        if (
+          typeof this.simpleCache['prisma:installed'] === 'undefined' ||
+          this.simpleCache['prisma:installed']
+        ) {
+          try {
+            // TODO: Make prisma implementation more generic so that it can be used with other ORMs, DBs and libraries
+            const { PrismaClient } = require('@prisma/client');
+            const prisma = new PrismaClient();
+            const prismaMetrics = prisma
+              ? await prisma.$metrics.prometheus()
+              : '';
+            metrics += prisma ? prismaMetrics : '';
+          } catch (error) {
+            this.simpleCache['prisma:installed'] = false;
+          }
         }
 
         metrics += await promClient.register.metrics();
