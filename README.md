@@ -1,9 +1,11 @@
 <a href="https://last9.io"><img src="https://last9.github.io/assets/last9-github-badge.svg" align="right" /></a>
 
 # @last9/openapm
+
 An APM solution based on metrics and open-source tools such as Prometheus and Grafana for NodeJs-based applications.
 
 ## Table of Contents
+
 1. [Installation](#installation)
 2. [Usage](#usage)
 3. [Options](#options)
@@ -18,6 +20,34 @@ npm install --save @last9/openapm@latest
 
 ## Usage
 
+```js
+const express = require('express');
+const { OpenAPM } = require('@last9/openapm');
+
+const app = express();
+const openapm = new OpenAPM();
+
+// Instrument services
+
+app.listen(3000);
+
+const gracefullyShutdown = () => {
+  app.close(() => {
+    openapm
+      .shutdown()
+      .then(() => {
+        console.log('OpenAPM shutdown successful.');
+      })
+      .catch((err) => {
+        console.log('Error shutting down OpenAPM', err);
+      });
+  });
+};
+
+process.on('SIGINT', gracefullyShutdown);
+process.on('SIGTERM', gracefullyShutdown);
+```
+
 1. [Express](#express)
 2. [MySQL](#mysql)
 3. [NestJS](#nestjs)
@@ -29,18 +59,10 @@ change the port, you can update it through the options
 ([See the options documentation](#options)).
 
 ```js
-const express = require('express')
-const { OpenAPM } = require('@last9/openapm')
-
-const app = express();
+const { OpenAPM } = require('@last9/openapm');
 const openapm = new OpenAPM();
 
-app.use(openapm.REDMiddleware);
-
-// ...
-
-app.listen(3000)
-
+openapm.instrument('express');
 ```
 
 ### MySQL
