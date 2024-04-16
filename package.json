@@ -4,6 +4,12 @@
   "version": "0.7.0",
   "main": "dist/index.js",
   "module": "dist/esm/index.js",
+  "exports": {
+    "nextjs": {
+      "import": "./dist/esm/clients/nextjs/index.js",
+      "require": "./dist/clients/nextjs/index.js"
+    }
+  },
   "scripts": {
     "build": "tsup",
     "build:watch": "tsup --watch",
