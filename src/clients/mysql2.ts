@@ -287,11 +287,19 @@ export const wrapPoolCluster = (poolCluster: PoolCluster, ctx: Context) => {
   return poolCluster;
 };
 
-export const instrumentMySQL = (mysql: {
-  createConnection: typeof createConnection;
-  createPool: typeof createPool;
-  createPoolCluster: typeof createPoolCluster;
-}) => {
+export const instrumentMySQL = (
+  mysql: {
+    createConnection: typeof createConnection;
+    createPool: typeof createPool;
+    createPoolCluster: typeof createPoolCluster;
+  },
+  mode: string
+) => {
+  if (mode === 'opentelemetry') {
+    console.log('opentelemetry is not supported for mysql instrumentation');
+    return;
+  }
+
   // Default histogram metrics
   const histogram = new promClient.Histogram({
     name: 'db_requests_duration_milliseconds',
