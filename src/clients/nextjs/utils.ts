@@ -47,3 +47,13 @@ export const getNormalizedPath = (filePath: string, projectDir: string) => {
     : path.join(projectDir, filePath);
   return path.normalize(absoluteResourcePath);
 };
+
+/**
+ *
+ * @param templatePath
+ * @returns template code
+ */
+export const getTemplateCode = (templatePath: string) => {
+  const template = path.resolve(templatePath);
+  return fs.readFileSync(template, 'utf-8');
+};

@@ -4,6 +4,8 @@ import { WebpackConfigContext } from 'next/dist/server/config-shared';
 import { getAppDir, getNormalizedPath, getPagesDir } from './utils';
 
 const regexForValidFiles = /\.(ts|js|jsx|tsx)$/;
+const regexForValidAppRouterFiles =
+  /[\\/](page|layout|loading|head|not-found)\.(js|jsx|tsx)$/;
 
 export const getWebpackConfig = (config: NextConfig) => {
   /**
@@ -30,29 +32,51 @@ export const getWebpackConfig = (config: NextConfig) => {
 
       // For pages router
       if (pagesDir) {
-        modifiedWebpackConfig.module.rules.unshift({
-          test: (filePath: string): boolean => {
-            if (regexForValidFiles.test(filePath)) {
-              const normal = getNormalizedPath(filePath, config.dir);
-              return normal.startsWith(path.join(pagesDir, 'api', path.sep));
-            }
-            return false;
-          },
-          use: {
-            loader: path.join(__dirname, 'loader.js'),
-            options: {
-              type: 'page/api'
-            }
-          }
-        });
+        // modifiedWebpackConfig.module.rules.unshift({
+        //   test: (filePath: string): boolean => {
+        //     if (regexForValidFiles.test(filePath)) {
+        //       const normal = getNormalizedPath(filePath, config.dir);
+        //       return normal.startsWith(path.join(pagesDir, 'api', path.sep));
+        //     }
+        //     return false;
+        //   },
+        //   use: {
+        //     loader: path.join(__dirname, 'loader.js'),
+        //     options: {
+        //       type: 'page/api'
+        //     }
+        //   }
+        // });
+        // modifiedWebpackConfig.module.rules.unshift({
+        //   test: (filePath: string): boolean => {
+        //     if (regexForValidFiles.test(filePath)) {
+        //       const normal = getNormalizedPath(filePath, config.dir);
+        //       return (
+        //         normal.startsWith(path.join(pagesDir, path.sep)) &&
+        //         !normal.startsWith(path.join(pagesDir, 'api', path.sep))
+        //       );
+        //     }
+        //     return false;
+        //   },
+        //   use: {
+        //     loader: path.join(__dirname, 'loader.js'),
+        //     options: {
+        //       type: 'page'
+        //     }
+        //   }
+        // });
+      }
 
+      // For app router
+      if (appDir) {
+        // Server Component
         modifiedWebpackConfig.module.rules.unshift({
           test: (filePath: string): boolean => {
             if (regexForValidFiles.test(filePath)) {
               const normal = getNormalizedPath(filePath, config.dir);
               return (
-                normal.startsWith(path.join(pagesDir, path.sep)) &&
-                !normal.startsWith(path.join(pagesDir, 'api', path.sep))
+                normal.startsWith(path.join(appDir, path.sep)) &&
+                !!normal.match(regexForValidAppRouterFiles)
               );
             }
             return false;
@@ -60,14 +84,10 @@ export const getWebpackConfig = (config: NextConfig) => {
           use: {
             loader: path.join(__dirname, 'loader.js'),
             options: {
-              type: 'page'
+              type: 'server-component'
             }
           }
         });
-      }
-
-      // For app router
-      if (appDir) {
       }
     }
   };
