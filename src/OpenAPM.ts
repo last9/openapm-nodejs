@@ -20,6 +20,7 @@ import { instrumentMySQL } from './clients/mysql2';
 import { instrumentNestFactory } from './clients/nestjs';
 import { LevitateConfig, LevitateEvents } from './levitate/events';
 import { join } from 'path';
+import { instrumentNextjs } from './clients/nextjs/nextjs';
 
 export type ExtractFromParams = {
   from: 'params';
@@ -331,6 +332,10 @@ export class OpenAPM extends LevitateEvents {
       if (moduleName === 'nestjs') {
         const { NestFactory } = require('@nestjs/core');
         instrumentNestFactory(NestFactory, this._REDMiddleware);
+      }
+      if (moduleName === 'nextjs') {
+        const nextServer = require('next/dist/server/next-server');
+        instrumentNextjs(nextServer.default);
       }
     } catch (error) {
       if (Object.keys(moduleNames).includes(moduleName)) {

@@ -1,3 +1,4 @@
+import prom from 'prom-client';
 import type { FunctionComponent } from 'react';
 // @ts-ignore
 import * as serverComponent from 'HANDLER_FILE_PATH';

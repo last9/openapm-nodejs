@@ -19,6 +19,8 @@ export const getWebpackConfig = (config: NextConfig) => {
         modifiedWebpackConfig = config.webpack(webpackCfg, ctx);
       }
 
+      console.log('modifiedWebpackConfig', modifiedWebpackConfig);
+
       // Adding empty rules array if they doesn't exist
       modifiedWebpackConfig['module'] = Object.assign(
         modifiedWebpackConfig['module'],
