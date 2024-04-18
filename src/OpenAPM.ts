@@ -78,6 +78,7 @@ const moduleNames = {
 const packageJson = getPackageJson();
 
 export class OpenAPM extends LevitateEvents {
+  private simpleCache: Record<string, any> = {};
   private path: string;
   private metricsServerPort: number;
   readonly environment: string;
@@ -190,7 +191,27 @@ export class OpenAPM extends LevitateEvents {
       const path = getSanitizedPath(req.url ?? '/');
       if (path === this.path && req.method === 'GET') {
         res.setHeader('Content-Type', promClient.register.contentType);
-        return res.end(await promClient.register.metrics());
+        let metrics = '';
+        if (
+          typeof this.simpleCache['prisma:installed'] === 'undefined' ||
+          this.simpleCache['prisma:installed']
+        ) {
+          try {
+            // TODO: Make prisma implementation more generic so that it can be used with other ORMs, DBs and libraries
+            const { PrismaClient } = require('@prisma/client');
+            const prisma = new PrismaClient();
+            const prismaMetrics = prisma
+              ? await prisma.$metrics.prometheus()
+              : '';
+            metrics += prisma ? prismaMetrics : '';
+          } catch (error) {
+            this.simpleCache['prisma:installed'] = false;
+          }
+        }
+
+        metrics += await promClient.register.metrics();
+
+        return res.end(metrics);
       } else {
         res.statusCode = 404;
         res.end('404 Not found');
@@ -288,7 +309,12 @@ export class OpenAPM extends LevitateEvents {
       }
 
       // Make sure you copy baseURL in case of nested routes.
-      const path = req.route ? req.baseUrl + req.route?.path : pathname;
+      const path = req.route
+        ? req.route?.path !== '*'
+          ? req.baseUrl + req.route?.path
+          : pathname
+        : pathname;
+
       const labels: Record<string, string> = {
         path: path,
         status: res.statusCode.toString(),
