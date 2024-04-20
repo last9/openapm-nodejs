@@ -82,6 +82,9 @@
     },
     "@prisma/client": {
       "optional": true
+    },
+    "next": {
+      "optional": true
     }
   },
   "directories": {
