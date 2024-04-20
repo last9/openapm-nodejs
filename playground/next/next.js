@@ -4,7 +4,9 @@ const next = require('next');
 const { parse } = require('url');
 var { OpenAPM } = require('../../dist/index.js');
 
-const openapm = new OpenAPM();
+const openapm = new OpenAPM({
+  metricsServerPort: 9098
+});
 openapm.instrument('nextjs');
 
 async function main() {
@@ -13,7 +15,7 @@ async function main() {
 
   // 'dev' is a boolean that indicates whether the app should run in development mode
   const dev = process.env.NODE_ENV !== 'production';
-  const port = 3000;
+  const port = 3002;
 
   // 'dir' is a string that specifies the directory where the app is located
   const dir = './playground/next';

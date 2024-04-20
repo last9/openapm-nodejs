@@ -2,7 +2,6 @@ import * as os from 'os';
 import http from 'http';
 import ResponseTime from 'response-time';
 import promClient from 'prom-client';
-import { loadManifest } from 'next/dist/server/load-manifest';
 
 import type {
   Counter,
@@ -19,7 +18,6 @@ import { instrumentExpress } from './clients/express';
 import { instrumentMySQL } from './clients/mysql2';
 import { instrumentNestFactory } from './clients/nestjs';
 import { LevitateConfig, LevitateEvents } from './levitate/events';
-import { join } from 'path';
 import { instrumentNextjs } from './clients/nextjs/nextjs';
 
 export type ExtractFromParams = {
@@ -289,17 +287,6 @@ export class OpenAPM extends LevitateEvents {
       const { pathname, labels: parsedLabelsFromPathname } =
         this.parseLabelsFromParams(sanitizedPathname, req.params);
 
-      // const reg = getRouteRegex(req.url);
-      const manifest = loadManifest(
-        join(
-          process.cwd(),
-          'playground/next',
-          '.next/server',
-          'app-paths-manifest.json'
-        )
-      );
-      console.log(manifest);
-
       // Skip the OPTIONS requests not to blow up cardinality. Express does not provide
       // information about the route for OPTIONS requests, which makes it very
       // hard to detect correct PATH. Until we fix it properly, the requests are skipped
@@ -362,6 +349,7 @@ export class OpenAPM extends LevitateEvents {
       if (moduleName === 'nextjs') {
         const nextServer = require('next/dist/server/next-server');
         instrumentNextjs(nextServer.default);
+        // console.log(nextServer.default);
       }
     } catch (error) {
       if (Object.keys(moduleNames).includes(moduleName)) {

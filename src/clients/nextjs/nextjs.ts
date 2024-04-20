@@ -1,4 +1,5 @@
 import type NextNodeServer from 'next/dist/server/next-server';
+import chokidar from 'chokidar';
 import prom, { Counter, Histogram } from 'prom-client';
 import { wrap } from '../../shimmer';
 import { loadManifest } from 'next/dist/server/load-manifest';
@@ -6,8 +7,67 @@ import { join } from 'path';
 import { getRouteRegex } from 'next/dist/shared/lib/router/utils/route-regex';
 import { getRouteMatcher } from 'next/dist/shared/lib/router/utils/route-matcher';
 
+const DOT_NEXT = join(process.cwd(), '.next');
+
 const PAGES_MANIFEST = 'server/pages-manifest.json';
 const APP_PATHS_MANIFEST = 'server/app-paths-manifest.json';
+
+const PATHS_CACHE = {
+  value: new Set<{
+    route: string;
+    re: RegExp;
+    matcher: (pathname: string | null | undefined) =>
+      | false
+      | {
+          [param: string]: any;
+        };
+  }>(),
+  setValue: async () => {
+    try {
+      const pagesManifest = (await loadManifest(
+        join(DOT_NEXT, PAGES_MANIFEST),
+        false
+      )) as Record<string, string>;
+      const appPathsManifest = (await loadManifest(
+        join(DOT_NEXT, APP_PATHS_MANIFEST),
+        false
+      )) as Record<string, string>;
+
+      for (const [key, _] of Object.entries(appPathsManifest)) {
+        const path = key.replace(/\/(page|not-found|layout|loading|head)$/, '');
+        const reg = getRouteRegex(path);
+        const matcher = getRouteMatcher(reg);
+
+        PATHS_CACHE.value.add({
+          route: path,
+          matcher,
+          re: reg.re
+        });
+      }
+
+      for (const key of Object.keys(pagesManifest)) {
+        const reg = getRouteRegex(key);
+        const matcher = getRouteMatcher(reg);
+
+        PATHS_CACHE.value.add({
+          route: key,
+          matcher,
+          re: reg.re
+        });
+      }
+    } catch (e) {}
+  },
+  keepUpdated: () => {
+    const watcher = chokidar.watch(DOT_NEXT, {
+      ignoreInitial: true
+    });
+
+    watcher.on('all', () => {
+      PATHS_CACHE.setValue();
+    });
+    return watcher;
+  }
+};
 
 const parsedPathname = (url: string) => {
   return url.split('?')[0];
@@ -54,7 +114,7 @@ const wrappedHandler = (
 };
 
 const getPagesCache = () => {
-  const dotNext = join(process.cwd(), '.next');
+  // const dotNext = join(process.cwd(), '.next');
   const pagesCache = new Set<{
     route: string;
     re: RegExp;
@@ -64,35 +124,44 @@ const getPagesCache = () => {
           [param: string]: any;
         };
   }>();
-  const appManifest = loadManifest(join(dotNext, APP_PATHS_MANIFEST), true) as {
-    pages: Record<string, Record<string, string>>;
-  };
-  const pagesManifest = loadManifest(join(dotNext, PAGES_MANIFEST), true) as {
-    pages: Record<string, Record<string, string>>;
-  };
 
-  for (const [key, _] of Object.entries(appManifest)) {
-    const path = key.replace(/\/(page|not-found|layout|loading|head)$/, '');
-    const reg = getRouteRegex(path);
-    const matcher = getRouteMatcher(reg);
+  try {
+    const appManifest = loadManifest(
+      join(DOT_NEXT, APP_PATHS_MANIFEST),
+      false
+    ) as {
+      pages: Record<string, Record<string, string>>;
+    };
+    const pagesManifest = loadManifest(
+      join(DOT_NEXT, PAGES_MANIFEST),
+      false
+    ) as {
+      pages: Record<string, Record<string, string>>;
+    };
 
-    pagesCache.add({
-      route: path,
-      matcher,
-      re: reg.re
-    });
-  }
+    for (const [key, _] of Object.entries(appManifest)) {
+      const path = key.replace(/\/(page|not-found|layout|loading|head)$/, '');
+      const reg = getRouteRegex(path);
+      const matcher = getRouteMatcher(reg);
 
-  for (const [key, _] of Object.entries(pagesManifest)) {
-    const reg = getRouteRegex(key);
-    const matcher = getRouteMatcher(reg);
+      pagesCache.add({
+        route: path,
+        matcher,
+        re: reg.re
+      });
+    }
 
-    pagesCache.add({
-      route: key,
-      matcher,
-      re: reg.re
-    });
-  }
+    for (const [key, _] of Object.entries(pagesManifest)) {
+      const reg = getRouteRegex(key);
+      const matcher = getRouteMatcher(reg);
+
+      pagesCache.add({
+        route: key,
+        matcher,
+        re: reg.re
+      });
+    }
+  } catch (e) {}
 
   return {
     pagesCache,
@@ -103,22 +172,15 @@ const getPagesCache = () => {
 };
 
 export const instrumentNextjs = (nextServer: typeof NextNodeServer) => {
-  const { pagesCache, update } = getPagesCache();
-
+  PATHS_CACHE.setValue();
+  PATHS_CACHE.keepUpdated();
   const getParameterizedRoute = (route: string) => {
-    for (const page of pagesCache) {
+    for (const page of PATHS_CACHE.value) {
       if (page.matcher(route) !== false) {
         return page.route;
       }
     }
 
-    update();
-
-    for (const page of pagesCache) {
-      if (page.matcher(route)) {
-        return page.route;
-      }
-    }
     return route;
   };
 
