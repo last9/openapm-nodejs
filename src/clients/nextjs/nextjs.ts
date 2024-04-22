@@ -34,7 +34,10 @@ const PATHS_CACHE = {
       )) as Record<string, string>;
 
       for (const [key, _] of Object.entries(appPathsManifest)) {
-        const path = key.replace(/\/(page|not-found|layout|loading|head)$/, '');
+        const path = key.replace(
+          /\/(page|not-found|layout|loading|head|route)$/,
+          ''
+        );
         const reg = getRouteRegex(path);
         const matcher = getRouteMatcher(reg);
 
@@ -113,64 +116,6 @@ const wrappedHandler = (
       .observe(duration);
 
     return result;
-  };
-};
-
-const getPagesCache = () => {
-  // const dotNext = join(process.cwd(), '.next');
-  const pagesCache = new Set<{
-    route: string;
-    re: RegExp;
-    matcher: (pathname: string | null | undefined) =>
-      | false
-      | {
-          [param: string]: any;
-        };
-  }>();
-
-  try {
-    const appManifest = loadManifest(
-      join(DOT_NEXT, APP_PATHS_MANIFEST),
-      false
-    ) as {
-      pages: Record<string, Record<string, string>>;
-    };
-    const pagesManifest = loadManifest(
-      join(DOT_NEXT, PAGES_MANIFEST),
-      false
-    ) as {
-      pages: Record<string, Record<string, string>>;
-    };
-
-    for (const [key, _] of Object.entries(appManifest)) {
-      const path = key.replace(/\/(page|not-found|layout|loading|head)$/, '');
-      const reg = getRouteRegex(path);
-      const matcher = getRouteMatcher(reg);
-
-      pagesCache.add({
-        route: path,
-        matcher,
-        re: reg.re
-      });
-    }
-
-    for (const [key, _] of Object.entries(pagesManifest)) {
-      const reg = getRouteRegex(key);
-      const matcher = getRouteMatcher(reg);
-
-      pagesCache.add({
-        route: key,
-        matcher,
-        re: reg.re
-      });
-    }
-  } catch (e) {}
-
-  return {
-    pagesCache,
-    update: () => {
-      getPagesCache();
-    }
   };
 };
 
