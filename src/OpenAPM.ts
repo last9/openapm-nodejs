@@ -342,7 +342,11 @@ export class OpenAPM extends LevitateEvents {
 
     metrics += await promClient.register.metrics();
 
-    return metrics;
+    if (metrics.startsWith('"') && metrics.endsWith('"')) {
+      metrics = metrics.slice(1, -1);
+    }
+
+    return metrics.trim();
   };
 
   public instrument(moduleName: SupportedModules) {
