@@ -1,6 +1,6 @@
 import type NextNodeServer from 'next/dist/server/next-server';
 import chokidar from 'chokidar';
-import prom, { Counter, Histogram } from 'prom-client';
+import type { Counter, Histogram } from 'prom-client';
 import { wrap } from '../../shimmer';
 import { loadManifest } from 'next/dist/server/load-manifest';
 import { join } from 'path';
@@ -92,10 +92,13 @@ const wrappedHandler = (
     }
     const end = process.hrtime.bigint();
     const duration = Number(end - start) / 1e6;
+    const parsedPath = ctx.getParameterizedRoute(
+      parsedPathname(req.url ?? '/')
+    );
 
     ctx.counter
       .labels(
-        ctx.getParameterizedRoute(parsedPathname(req.url ?? '/')),
+        parsedPath !== '' ? parsedPath : '/',
         req.method ?? 'GET',
         res.statusCode?.toString() ?? '500'
       )
@@ -103,7 +106,7 @@ const wrappedHandler = (
 
     ctx.histogram
       .labels(
-        ctx.getParameterizedRoute(parsedPathname(req.url ?? '/')),
+        parsedPath !== '' ? parsedPath : '/',
         req.method ?? 'GET',
         res.statusCode?.toString() ?? '500'
       )
@@ -171,7 +174,16 @@ const getPagesCache = () => {
   };
 };
 
-export const instrumentNextjs = (nextServer: typeof NextNodeServer) => {
+export const instrumentNextjs = (
+  nextServer: typeof NextNodeServer,
+  { counter, histogram }: { counter?: Counter; histogram?: Histogram }
+) => {
+  if (!counter || !histogram) {
+    throw new Error(
+      'counter and histogram are required. Make sure you are using openmetrics mode.'
+    );
+  }
+
   PATHS_CACHE.setValue();
   PATHS_CACHE.keepUpdated();
   const getParameterizedRoute = (route: string) => {
@@ -183,19 +195,6 @@ export const instrumentNextjs = (nextServer: typeof NextNodeServer) => {
 
     return route;
   };
-
-  const counter = new prom.Counter({
-    name: 'nextjs_http_request_total',
-    help: 'Total number of requests to nextjs app.',
-    labelNames: ['path', 'method', 'status']
-  });
-
-  const histogram = new prom.Histogram({
-    name: 'nextjs_http_request_duration_milliseconds',
-    help: 'Duration of requests to nextjs app.',
-    labelNames: ['path', 'method', 'status'],
-    buckets: prom.exponentialBuckets(0.25, 1.5, 31)
-  });
 
   wrap(nextServer.prototype, 'getRequestHandler', function (original) {
     return function (

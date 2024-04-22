@@ -348,7 +348,10 @@ export class OpenAPM extends LevitateEvents {
       }
       if (moduleName === 'nextjs') {
         const nextServer = require('next/dist/server/next-server');
-        instrumentNextjs(nextServer.default);
+        instrumentNextjs(nextServer.default, {
+          counter: this.requestsCounter,
+          histogram: this.requestsDurationHistogram
+        });
         // console.log(nextServer.default);
       }
     } catch (error) {
