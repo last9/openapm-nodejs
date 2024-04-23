@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/setup-node@v2
         with:
-          node-version: 16.20.0
+          node-version: 18.19.0
       - uses: shogo82148/actions-setup-mysql@v1.23.0
         with:
           mysql-version: '8.0'
