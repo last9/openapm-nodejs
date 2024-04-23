@@ -8,7 +8,7 @@ import parsePrometheusTextFormat from 'parse-prometheus-text-format';
 import { resolve } from 'path';
 import { sendTestRequestNextJS, sendTestRequests } from '../utils';
 
-describe.only('Next.js', () => {
+describe('Next.js', () => {
   let openapm: OpenAPM;
   let server: Server;
   let parsedData: Array<Record<string, any>> = [];
