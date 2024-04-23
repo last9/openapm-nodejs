@@ -40,7 +40,7 @@ describe('Next.js', () => {
     });
 
     await app.prepare();
-    server = expressApp.listen(3002);
+    server = expressApp.listen(3003);
 
     await sendTestRequestNextJS(expressApp, 3);
     const res = await request(expressApp).get('/metrics');
