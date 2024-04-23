@@ -29,6 +29,12 @@ async function main() {
   // openapm.instrument('nextjs', nextApp);
   const handle = nextApp.getRequestHandler();
 
+  app.get('/metrics', async (_, res) => {
+    let metrics = await openapm.getMetrics();
+    res.setHeader('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+    res.end(metrics);
+  });
+
   app.all('*', async (req, res) => {
     const parsedUrl = parse(req.url, true);
     await handle(req, res, parsedUrl);
