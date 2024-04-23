@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsup",
     "build:watch": "tsup --watch",
-    "test": "vitest",
+    "test": "cd tests/nextjs && next build && cd ../.. && vitest",
     "test:ui": "vitest --ui"
   },
   "license": "Apache-2.0",
