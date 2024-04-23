@@ -18,7 +18,7 @@ import { instrumentExpress } from './clients/express';
 import { instrumentMySQL } from './clients/mysql2';
 import { instrumentNestFactory } from './clients/nestjs';
 import { LevitateConfig, LevitateEvents } from './levitate/events';
-import { instrumentNextjs } from './clients/nextjs/nextjs';
+import { instrumentNextjs } from './clients/nextjs';
 
 export type ExtractFromParams = {
   from: 'params';
@@ -294,7 +294,7 @@ export class OpenAPM extends LevitateEvents {
         : pathname;
 
       const labels: Record<string, string> = {
-        path: path,
+        path,
         status: res.statusCode.toString(),
         method: req.method as string,
         ...parsedLabelsFromPathname

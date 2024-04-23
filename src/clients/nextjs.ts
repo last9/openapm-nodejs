@@ -1,7 +1,7 @@
 import type NextNodeServer from 'next/dist/server/next-server';
 import chokidar from 'chokidar';
 import type { Counter, Histogram } from 'prom-client';
-import { wrap } from '../../shimmer';
+import { wrap } from '../shimmer';
 import { loadManifest } from 'next/dist/server/load-manifest';
 import { join } from 'path';
 import { getRouteRegex } from 'next/dist/shared/lib/router/utils/route-regex';
@@ -33,7 +33,9 @@ const PATHS_CACHE = {
         false
       )) as Record<string, string>;
 
-      for (const [key, _] of Object.entries(appPathsManifest)) {
+      const appPathsKeys = Object.keys(appPathsManifest);
+      for (let i = 0; i < appPathsKeys.length; i++) {
+        const key = appPathsKeys[i];
         const path = key.replace(
           /\/(page|not-found|layout|loading|head|route)$/,
           ''
@@ -48,7 +50,9 @@ const PATHS_CACHE = {
         });
       }
 
-      for (const key of Object.keys(pagesManifest)) {
+      const keys = Object.keys(pagesManifest);
+      for (let i = 0; i < keys.length; i++) {
+        const key = keys[i];
         const reg = getRouteRegex(key);
         const matcher = getRouteMatcher(reg);
 
@@ -132,7 +136,9 @@ export const instrumentNextjs = (
   PATHS_CACHE.setValue();
   PATHS_CACHE.keepUpdated();
   const getParameterizedRoute = (route: string) => {
-    for (const page of PATHS_CACHE.value) {
+    const values = Array.from(PATHS_CACHE.value);
+    for (let i = 0; i < values.length; i++) {
+      const page = values[i];
       if (page.matcher(route) !== false) {
         return page.route;
       }
