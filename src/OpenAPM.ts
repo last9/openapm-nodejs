@@ -174,7 +174,9 @@ export class OpenAPM extends LevitateEvents {
 
   public shutdown = async () => {
     return new Promise((resolve, reject) => {
-      console.log('Shutting down metrics server gracefully.');
+      if (this.enableMetricsServer) {
+        console.log('Shutting down metrics server gracefully.');
+      }
       this.metricsServer?.close((err) => {
         promClient.register.clear();
 

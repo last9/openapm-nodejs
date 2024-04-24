@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const next = require('next');
 const { parse } = require('url');
-var { OpenAPM } = require('../../dist/index.js');
+const { OpenAPM } = require('../../dist/index.js');
 
 const openapm = new OpenAPM({
   metricsServerPort: 9098
@@ -30,7 +30,7 @@ async function main() {
   const handle = nextApp.getRequestHandler();
 
   app.get('/metrics', async (_, res) => {
-    let metrics = await openapm.getMetrics();
+    const metrics = await openapm.getMetrics();
     res.setHeader('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
     res.end(metrics);
   });

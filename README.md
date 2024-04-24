@@ -9,8 +9,9 @@ An APM solution based on metrics and open-source tools such as Prometheus and Gr
 1. [Installation](#installation)
 2. [Usage](#usage)
 3. [Options](#options)
-4. [Setup Locally](#setup-locally)
-5. [Grafana Dashboard View](#grafana-dashboard-view)
+4. [API Reference](#api-reference)
+5. [Setup Locally](#setup-locally)
+6. [Grafana Dashboard View](#grafana-dashboard-view)
 
 ## Installation
 
@@ -51,6 +52,7 @@ process.on('SIGTERM', gracefullyShutdown);
 1. [Express](#express)
 2. [MySQL](#mysql)
 3. [NestJS](#nestjs)
+4. [Next.js][#nextjs]
 
 ### Express
 
@@ -82,6 +84,16 @@ OpenAPM currently supports RED Metrics for NestJS v4 and above.
 ```js
 openapm.instrument('nestjs');
 ```
+
+### Next.js
+
+OpenAPM supports RED metrics for both pages and app router in a Next.js application.
+
+```js
+openapm.instrument('nextjs');
+```
+
+> Note: You can only use the library if Next.js is running in a Node.js environment. Since OpenAPM relies on prom-client for capturing metrics data a serverless environment might not be able persist them.
 
 ## Options
 
@@ -147,6 +159,8 @@ const openapm = new OpenAPM({
 
 9. `levitateConfig`: (Optional) Configuration for Levitate TSDB. Adding this configuration will enable the [Change Events](https://docs.last9.io/docs/change-events).
 
+10. `enableMetricsServer`: (Optional) Defaults to `true`. When set to `false` the OpenAPM won't start a metrics server. To get the metrics users can rely on the `.getMetrics()` function.
+
 ```js
 {
    ...
@@ -159,6 +173,48 @@ const openapm = new OpenAPM({
       }
    }
 }
+```
+
+## API Reference
+
+1. `instrument`: Used to instrument supported technologies. Refer the [usage][#usage] section.
+
+2. `getMetrics`: Returns a Promise of string which contains metrics in prometheus exposition format. You can use this function to expose a metrics endpoint if `enableMetricsServer` is set to false. For example,
+
+```js
+const openapm = new OpenAPM({
+  enableMetricsServer: false
+});
+
+openapm.instrument('express');
+
+const app = express();
+
+app.get('/metrics', async (_, res) => {
+  const metrics = await openapm.getMetrics();
+  res.setHeader('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+  res.end(metrics);
+});
+```
+
+3. `shutdown`: Returns a promise which is resolved after the cleanup in OpenAPM. The cleanup includes closing the server if it has started and clearing the prom-client register.
+
+```js
+const gracefullyShutdown = () => {
+  server.close(() => {
+    openapm
+      .shutdown()
+      .then(() => {
+        console.log('OpenAPM shutdown successful.');
+      })
+      .catch((err) => {
+        console.log('Error shutting down OpenAPM', err);
+      });
+  });
+};
+
+process.on('SIGINT', gracefullyShutdown);
+process.on('SIGTERM', gracefullyShutdown);
 ```
 
 ## Setup locally
