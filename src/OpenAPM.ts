@@ -35,6 +35,10 @@ export type DefaultLabels =
 
 export interface OpenAPMOptions {
   /**
+   * Enable the OpenAPM
+   */
+  enabled?: boolean;
+  /**
    * Enable the metrics server
    * @default true
    */
@@ -84,12 +88,13 @@ export class OpenAPM extends LevitateEvents {
   private simpleCache: Record<string, any> = {};
   private path: string;
   private metricsServerPort: number;
+  private enabled: boolean;
   private enableMetricsServer: boolean;
   readonly environment: string;
   readonly program: string;
   private defaultLabels?: Record<string, string>;
-  private requestsCounterConfig: CounterConfiguration<string>;
-  private requestDurationHistogramConfig: HistogramConfiguration<string>;
+  readonly requestsCounterConfig: CounterConfiguration<string>;
+  readonly requestDurationHistogramConfig: HistogramConfiguration<string>;
   private requestsCounter?: Counter;
   private requestsDurationHistogram?: Histogram;
   private extractLabels?: Record<string, ExtractFromParams>;
@@ -101,6 +106,7 @@ export class OpenAPM extends LevitateEvents {
   constructor(options?: OpenAPMOptions) {
     super(options);
     // Initializing all the options
+    this.enabled = options?.enabled ?? true;
     this.path = options?.path ?? '/metrics';
     this.metricsServerPort = options?.metricsServerPort ?? 9097;
     this.enableMetricsServer = options?.enableMetricsServer ?? true;
@@ -134,8 +140,10 @@ export class OpenAPM extends LevitateEvents {
     this.customPathsToMask = options?.customPathsToMask;
     this.excludeDefaultLabels = options?.excludeDefaultLabels;
 
-    this.initiateMetricsRoute();
-    this.initiatePromClient();
+    if (this.enabled) {
+      this.initiateMetricsRoute();
+      this.initiatePromClient();
+    }
   }
 
   private getDefaultLabels = () => {
@@ -174,6 +182,9 @@ export class OpenAPM extends LevitateEvents {
 
   public shutdown = async () => {
     return new Promise((resolve, reject) => {
+      if (!this.enabled) {
+        resolve(undefined);
+      }
       if (this.enableMetricsServer) {
         console.log('Shutting down metrics server gracefully.');
       }
@@ -276,6 +287,9 @@ export class OpenAPM extends LevitateEvents {
       res: ServerResponse<IncomingMessage>,
       time: number
     ) => {
+      if (!this.enabled) {
+        return;
+      }
       const sanitizedPathname = getSanitizedPath(req.originalUrl ?? '/');
       // Extract labels from the request params
       const { pathname, labels: parsedLabelsFromPathname } =
@@ -290,11 +304,7 @@ export class OpenAPM extends LevitateEvents {
       }
 
       // Make sure you copy baseURL in case of nested routes.
-      const path = req.route
-        ? req.route?.path !== '*'
-          ? req.baseUrl + req.route?.path
-          : pathname
-        : pathname;
+      const path = req.route ? req.baseUrl + req.route?.path : pathname;
 
       const labels: Record<string, string> = {
         path,
@@ -353,6 +363,9 @@ export class OpenAPM extends LevitateEvents {
   };
 
   public instrument(moduleName: SupportedModules) {
+    if (!this.enabled) {
+      return;
+    }
     try {
       if (moduleName === 'express') {
         const express = require('express');
@@ -368,10 +381,14 @@ export class OpenAPM extends LevitateEvents {
       }
       if (moduleName === 'nextjs') {
         const nextServer = require('next/dist/server/next-server');
-        instrumentNextjs(nextServer.default, {
-          counter: this.requestsCounter,
-          histogram: this.requestsDurationHistogram
-        });
+        instrumentNextjs(
+          nextServer.default,
+          {
+            counter: this.requestsCounter,
+            histogram: this.requestsDurationHistogram
+          },
+          this
+        );
       }
     } catch (error) {
       if (Object.keys(moduleNames).includes(moduleName)) {

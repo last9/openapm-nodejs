@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Optional `enableMetricsServer` option to enable of disable the metrics server.
+- Optional `enableMetricsServer` option to enable or disable the metrics server.
 - Exposed `getMetrics` function to get the metrics in prometheus exposition format.
 - Add support to instrument applications based on `Next.js` framework in Node.js environment.
 

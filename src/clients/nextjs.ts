@@ -1,11 +1,12 @@
 import type NextNodeServer from 'next/dist/server/next-server';
+import prom, { Counter, Histogram } from 'prom-client';
 import chokidar from 'chokidar';
-import type { Counter, Histogram } from 'prom-client';
 import { wrap } from '../shimmer';
 import { loadManifest } from 'next/dist/server/load-manifest';
 import { join } from 'path';
 import { getRouteRegex } from 'next/dist/shared/lib/router/utils/route-regex';
 import { getRouteMatcher } from 'next/dist/shared/lib/router/utils/route-matcher';
+import OpenAPM from '../OpenAPM';
 
 const DOT_NEXT = join(process.cwd(), '.next');
 
@@ -84,8 +85,8 @@ const wrappedHandler = (
   handler: ReturnType<NextNodeServer['getRequestHandler']>,
   ctx: {
     getParameterizedRoute: (route: string) => string;
-    counter: Counter;
-    histogram: Histogram;
+    counter?: Counter;
+    histogram?: Histogram;
   }
 ) => {
   return async function (
@@ -104,7 +105,7 @@ const wrappedHandler = (
     );
 
     ctx.counter
-      .labels(
+      ?.labels(
         parsedPath !== '' ? parsedPath : '/',
         req.method ?? 'GET',
         res.statusCode?.toString() ?? '500'
@@ -112,7 +113,7 @@ const wrappedHandler = (
       .inc();
 
     ctx.histogram
-      .labels(
+      ?.labels(
         parsedPath !== '' ? parsedPath : '/',
         req.method ?? 'GET',
         res.statusCode?.toString() ?? '500'
@@ -125,12 +126,20 @@ const wrappedHandler = (
 
 export const instrumentNextjs = (
   nextServer: typeof NextNodeServer,
-  { counter, histogram }: { counter?: Counter; histogram?: Histogram }
+  { counter, histogram }: { counter?: Counter; histogram?: Histogram },
+  openapm: OpenAPM
 ) => {
-  if (!counter || !histogram) {
-    throw new Error(
-      'counter and histogram are required. Make sure you are using openmetrics mode.'
-    );
+  const ctx = {
+    counter,
+    histogram
+  };
+
+  if (typeof ctx.counter === 'undefined') {
+    ctx.counter = new prom.Counter(openapm.requestsCounterConfig);
+  }
+
+  if (typeof ctx.histogram === 'undefined') {
+    ctx.histogram = new prom.Histogram(openapm.requestDurationHistogramConfig);
   }
 
   PATHS_CACHE.setValue();
