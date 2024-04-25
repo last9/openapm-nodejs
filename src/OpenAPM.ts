@@ -192,6 +192,7 @@ export class OpenAPM extends LevitateEvents {
   };
 
   private initiateMetricsRoute = () => {
+    // Enabling metrics server runs a separate process for the metrics server that a Prometheus agent can scrape. If it is not enabled, metrics are exposed in the same process as the web application.
     if (!this.enableMetricsServer) {
       return;
     }
@@ -371,7 +372,6 @@ export class OpenAPM extends LevitateEvents {
           counter: this.requestsCounter,
           histogram: this.requestsDurationHistogram
         });
-        // console.log(nextServer.default);
       }
     } catch (error) {
       if (Object.keys(moduleNames).includes(moduleName)) {
