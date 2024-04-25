@@ -1,9 +1,9 @@
-import { describe, beforeAll, expect, test, vi, afterAll } from 'vitest';
-import mysql2, { Connection, Pool, PoolCluster, PoolNamespace } from 'mysql2';
+import { describe, beforeAll, expect, test, afterAll } from 'vitest';
+import mysql2, { Connection, Pool, PoolCluster } from 'mysql2';
 import { instrumentMySQL, symbols } from '../src/clients/mysql2';
 import prom, { Histogram } from 'prom-client';
 
-const connectionUri = `mysql://root@localhost:3306/test_db`;
+const connectionUri = 'mysql://root@localhost:3306/test_db';
 
 const sendTestRequest = async (conn: Connection | Pool, query: string) => {
   return new Promise((resolve) => {

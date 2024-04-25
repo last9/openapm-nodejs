@@ -17,8 +17,9 @@ import { getHostIpAddress, getPackageJson, getSanitizedPath } from './utils';
 import { instrumentExpress } from './clients/express';
 import { instrumentMySQL } from './clients/mysql2';
 import { instrumentNestFactory } from './clients/nestjs';
-import { LevitateConfig, LevitateEvents } from './levitate/events';
 import { instrumentNextjs } from './clients/nextjs';
+
+import { LevitateConfig, LevitateEvents } from './levitate/events';
 
 export type ExtractFromParams = {
   from: 'params';
@@ -85,7 +86,7 @@ const moduleNames = {
 const packageJson = getPackageJson();
 
 export class OpenAPM extends LevitateEvents {
-  private simpleCache: Record<string, any> = {};
+  readonly simpleCache: Record<string, any> = {};
   private path: string;
   private metricsServerPort: number;
   private enabled: boolean;
@@ -189,8 +190,6 @@ export class OpenAPM extends LevitateEvents {
         console.log('Shutting down metrics server gracefully.');
       }
       this.metricsServer?.close((err) => {
-        promClient.register.clear();
-
         if (err) {
           reject(err);
           return;
@@ -199,6 +198,9 @@ export class OpenAPM extends LevitateEvents {
         resolve(undefined);
         console.log('Metrics server shut down gracefully.');
       });
+
+      promClient.register.clear();
+      resolve(undefined);
     });
   };
 
@@ -348,6 +350,8 @@ export class OpenAPM extends LevitateEvents {
         const prisma = new PrismaClient();
         const prismaMetrics = prisma ? await prisma.$metrics.prometheus() : '';
         metrics += prisma ? prismaMetrics : '';
+
+        await prisma.$disconnect();
       } catch (error) {
         this.simpleCache['prisma:installed'] = false;
       }
@@ -392,7 +396,6 @@ export class OpenAPM extends LevitateEvents {
       }
     } catch (error) {
       if (Object.keys(moduleNames).includes(moduleName)) {
-        console.log(error);
         throw new Error(
           `OpenAPM couldn't import the ${moduleNames[moduleName]} package, please install it.`
         );
