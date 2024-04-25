@@ -93,7 +93,7 @@ OpenAPM supports RED metrics for both pages and app router in a Next.js applicat
 openapm.instrument('nextjs');
 ```
 
-> Note: You can only use the library if Next.js is running in a Node.js environment. Since OpenAPM relies on prom-client for capturing metrics data a serverless environment might not be able persist them.
+> Note: You can only use the library if Next.js runs in a Node.js environment. Since OpenAPM relies on prom-client for capturing metrics data, a serverless environment might not be able persist them.
 
 ## Options
 
@@ -179,7 +179,7 @@ const openapm = new OpenAPM({
 
 1. `instrument`: Used to instrument supported technologies. Refer the [usage][#usage] section.
 
-2. `getMetrics`: Returns a Promise of string which contains metrics in prometheus exposition format. You can use this function to expose a metrics endpoint if `enableMetricsServer` is set to false. For example,
+2. `getMetrics`: Returns a Promise of string which contains metrics in Prometheus exposition format. You can use this function to expose a metrics endpoint if `enableMetricsServer` is set to false. For example,
 
 ```js
 const openapm = new OpenAPM({
@@ -197,7 +197,7 @@ app.get('/metrics', async (_, res) => {
 });
 ```
 
-3. `shutdown`: Returns a promise which is resolved after the cleanup in OpenAPM. The cleanup includes closing the server if it has started and clearing the prom-client register.
+3. `shutdown`: Returns a promise which is resolved after the cleanup in OpenAPM. The cleanup includes closing the metrics server if it has started and cleared the prom-client register.
 
 ```js
 const gracefullyShutdown = () => {
