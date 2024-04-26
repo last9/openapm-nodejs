@@ -370,9 +370,9 @@ export class OpenAPM extends LevitateEvents {
     return metrics.trim();
   };
 
-  public instrument(moduleName: SupportedModules) {
+  public instrument(moduleName: SupportedModules): boolean {
     if (!this.enabled) {
-      return;
+      return false;
     }
     try {
       if (moduleName === 'express') {
@@ -398,6 +398,8 @@ export class OpenAPM extends LevitateEvents {
           this
         );
       }
+
+      return true;
     } catch (error) {
       if (Object.keys(moduleNames).includes(moduleName)) {
         throw new Error(
