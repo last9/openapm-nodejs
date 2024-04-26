@@ -6,7 +6,7 @@ import { describe, afterAll, beforeAll, test, expect } from 'vitest';
 import OpenAPM from '../../src/OpenAPM';
 import parsePrometheusTextFormat from 'parse-prometheus-text-format';
 import { resolve } from 'path';
-import { sendTestRequestNextJS, sendTestRequests } from '../utils';
+import { sendTestRequestNextJS } from '../utils';
 
 describe('Next.js', () => {
   let openapm: OpenAPM;
@@ -47,7 +47,8 @@ describe('Next.js', () => {
     parsedData = parsePrometheusTextFormat(res.text);
   });
 
-  afterAll(() => {
+  afterAll(async () => {
+    await openapm.shutdown();
     server?.close();
   });
 

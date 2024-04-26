@@ -1,12 +1,14 @@
 import express, { Express } from 'express';
 import { test, expect, describe, beforeAll, afterAll, vi } from 'vitest';
 
-import OpenAPM from '../src/OpenAPM';
-import { addRoutes, makeRequest } from './utils';
+import OpenAPM from '../../src/OpenAPM';
+import { addRoutes, makeRequest } from '../utils';
+import { Server } from 'http';
 
 describe('Prisma', () => {
   let openapm: OpenAPM;
   let app: Express;
+  let server: Server;
 
   beforeAll(async () => {
     openapm = new OpenAPM({
@@ -21,11 +23,12 @@ describe('Prisma', () => {
     });
 
     addRoutes(app);
-    app.listen(3002);
+    server = app.listen(3002);
   });
 
   afterAll(async () => {
     await openapm.shutdown();
+    server.close();
   });
 
   test('prisma:installed - false', async () => {

@@ -4,9 +4,9 @@
  * not testing or developing for the same
  *  */
 require('dotenv').config();
-var express = require('express');
-var { OpenAPM } = require('../dist/index.js');
-var mysql2 = require('mysql2');
+const express = require('express');
+const { OpenAPM } = require('../dist/index.js');
+const mysql2 = require('mysql2');
 
 const openapm = new OpenAPM({
   extractLabels: {
@@ -17,10 +17,10 @@ const openapm = new OpenAPM({
     }
   },
   levitateConfig: {
-    orgSlug: process.env['LEVITATE_ORG_SLUG'],
-    dataSourceName: process.env['LEVITATE_DATASOURCE'],
+    orgSlug: process.env.LEVITATE_ORG_SLUG,
+    dataSourceName: process.env.LEVITATE_DATASOURCE,
     refreshTokens: {
-      write: process.env['LEVITATE_WRITE_REFRESH_TOKEN']
+      write: process.env.LEVITATE_WRITE_REFRESH_TOKEN
     }
   },
   customPathsToMask: [/\b\d+(?:,\d+)*\b/gm],
@@ -33,7 +33,7 @@ openapm.instrument('mysql');
 const app = express();
 
 const pool = mysql2.createPool(
-  `mysql://express-app:password@127.0.0.1/express` //  If this throws an error, Change the db url to the one you're running on your machine locally or the testing instance you might have hosted.
+  'mysql://express-app:password@127.0.0.1/express' //  If this throws an error, Change the db url to the one you're running on your machine locally or the testing instance you might have hosted.
 );
 
 app.get('/result', (req, res) => {
@@ -52,7 +52,7 @@ app.get('/result', (req, res) => {
 });
 
 app.get('/organizations/:org/users', (req, res) => {
-  console.log(req.params['org']);
+  console.log(req.params.org);
 
   res.status(200).json({});
 });

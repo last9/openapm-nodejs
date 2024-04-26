@@ -7,8 +7,8 @@
   "scripts": {
     "build": "tsup",
     "build:watch": "tsup --watch",
-    "test": "cd tests/nextjs && next build && cd ../.. && vitest",
-    "test:ui": "cd tests/nextjs && next build && cd ../.. && vitest --ui"
+    "vitest": "vitest",
+    "test": "chmod +x ./run-tests.sh && ./run-tests.sh"
   },
   "license": "Apache-2.0",
   "author": "Last9 team <hi@last9.io>",
