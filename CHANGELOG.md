@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0]
+
+### Added
+
+- Optional `enableMetricsServer` option to enable or disable the metrics server.
+- Optional `enabled` option to conditionally enable or disable OpenAPM.
+- Exposed `getMetrics` function to get the metrics in prometheus exposition format.
+- Add support to instrument applications based on `Next.js` framework in Node.js environment.
+- Automatically add Prisma metrics if they are available.
+
 ## [0.7.0] - 2024-04-01
 
 ### Added

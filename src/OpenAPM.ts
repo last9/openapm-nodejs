@@ -17,6 +17,8 @@ import { getHostIpAddress, getPackageJson, getSanitizedPath } from './utils';
 import { instrumentExpress } from './clients/express';
 import { instrumentMySQL } from './clients/mysql2';
 import { instrumentNestFactory } from './clients/nestjs';
+import { instrumentNextjs } from './clients/nextjs';
+
 import { LevitateConfig, LevitateEvents } from './levitate/events';
 
 export type ExtractFromParams = {
@@ -33,6 +35,15 @@ export type DefaultLabels =
   | 'host';
 
 export interface OpenAPMOptions {
+  /**
+   * Enable the OpenAPM
+   */
+  enabled?: boolean;
+  /**
+   * Enable the metrics server
+   * @default true
+   */
+  enableMetricsServer?: boolean;
   /** Route where the metrics will be exposed
    * @default "/metrics"
    */
@@ -63,24 +74,28 @@ export interface OpenAPMOptions {
   levitateConfig?: LevitateConfig;
 }
 
-export type SupportedModules = 'express' | 'mysql' | 'nestjs';
+export type SupportedModules = 'express' | 'mysql' | 'nestjs' | 'nextjs';
 
 const moduleNames = {
   express: 'express',
   mysql: 'mysql2',
-  nestjs: '@nestjs/core'
+  nestjs: '@nestjs/core',
+  nextjs: 'next'
 };
 
 const packageJson = getPackageJson();
 
 export class OpenAPM extends LevitateEvents {
+  public simpleCache: Record<string, any> = {};
   private path: string;
   private metricsServerPort: number;
+  private enabled: boolean;
+  private enableMetricsServer: boolean;
   readonly environment: string;
   readonly program: string;
   private defaultLabels?: Record<string, string>;
-  private requestsCounterConfig: CounterConfiguration<string>;
-  private requestDurationHistogramConfig: HistogramConfiguration<string>;
+  readonly requestsCounterConfig: CounterConfiguration<string>;
+  readonly requestDurationHistogramConfig: HistogramConfiguration<string>;
   private requestsCounter?: Counter;
   private requestsDurationHistogram?: Histogram;
   private extractLabels?: Record<string, ExtractFromParams>;
@@ -92,8 +107,10 @@ export class OpenAPM extends LevitateEvents {
   constructor(options?: OpenAPMOptions) {
     super(options);
     // Initializing all the options
+    this.enabled = options?.enabled ?? true;
     this.path = options?.path ?? '/metrics';
     this.metricsServerPort = options?.metricsServerPort ?? 9097;
+    this.enableMetricsServer = options?.enableMetricsServer ?? true;
     this.environment = options?.environment ?? 'production';
     this.program = packageJson?.name ?? '';
     this.defaultLabels = options?.defaultLabels;
@@ -124,8 +141,10 @@ export class OpenAPM extends LevitateEvents {
     this.customPathsToMask = options?.customPathsToMask;
     this.excludeDefaultLabels = options?.excludeDefaultLabels;
 
-    this.initiateMetricsRoute();
-    this.initiatePromClient();
+    if (this.enabled) {
+      this.initiateMetricsRoute();
+      this.initiatePromClient();
+    }
   }
 
   private getDefaultLabels = () => {
@@ -164,10 +183,13 @@ export class OpenAPM extends LevitateEvents {
 
   public shutdown = async () => {
     return new Promise((resolve, reject) => {
-      console.log('Shutting down metrics server gracefully.');
+      if (!this.enabled) {
+        resolve(undefined);
+      }
+      if (this.enableMetricsServer) {
+        console.log('Shutting down metrics server gracefully.');
+      }
       this.metricsServer?.close((err) => {
-        promClient.register.clear();
-
         if (err) {
           reject(err);
           return;
@@ -176,17 +198,25 @@ export class OpenAPM extends LevitateEvents {
         resolve(undefined);
         console.log('Metrics server shut down gracefully.');
       });
+
+      promClient.register.clear();
+      resolve(undefined);
     });
   };
 
   private initiateMetricsRoute = () => {
+    // Enabling metrics server runs a separate process for the metrics server that a Prometheus agent can scrape. If it is not enabled, metrics are exposed in the same process as the web application.
+    if (!this.enableMetricsServer) {
+      return;
+    }
     // Creating native http server
     this.metricsServer = http.createServer(async (req, res) => {
       // Sanitize the path
       const path = getSanitizedPath(req.url ?? '/');
       if (path === this.path && req.method === 'GET') {
         res.setHeader('Content-Type', promClient.register.contentType);
-        return res.end(await promClient.register.metrics());
+        const metrics = await this.getMetrics();
+        return res.end(metrics);
       } else {
         res.statusCode = 404;
         res.end('404 Not found');
@@ -259,6 +289,9 @@ export class OpenAPM extends LevitateEvents {
       res: ServerResponse<IncomingMessage>,
       time: number
     ) => {
+      if (!this.enabled) {
+        return;
+      }
       const sanitizedPathname = getSanitizedPath(req.originalUrl ?? '/');
       // Extract labels from the request params
       const { pathname, labels: parsedLabelsFromPathname } =
@@ -274,8 +307,9 @@ export class OpenAPM extends LevitateEvents {
 
       // Make sure you copy baseURL in case of nested routes.
       const path = req.route ? req.baseUrl + req.route?.path : pathname;
+
       const labels: Record<string, string> = {
-        path: path,
+        path,
         status: res.statusCode.toString(),
         method: req.method as string,
         ...parsedLabelsFromPathname
@@ -304,7 +338,42 @@ export class OpenAPM extends LevitateEvents {
    */
   public REDMiddleware = this._REDMiddleware;
 
-  public instrument(moduleName: SupportedModules) {
+  public getMetrics = async (): Promise<string> => {
+    let metrics = '';
+    if (!this.enabled) {
+      return metrics;
+    }
+    if (
+      typeof this.simpleCache['prisma:installed'] === 'undefined' ||
+      this.simpleCache['prisma:installed']
+    ) {
+      try {
+        // TODO: Make prisma implementation more generic so that it can be used with other ORMs, DBs and libraries
+        const { PrismaClient } = require('@prisma/client');
+        const prisma = new PrismaClient();
+        const prismaMetrics = prisma ? await prisma.$metrics.prometheus() : '';
+        metrics += prisma ? prismaMetrics : '';
+
+        this.simpleCache['prisma:installed'] = true;
+        await prisma.$disconnect();
+      } catch (error) {
+        this.simpleCache['prisma:installed'] = false;
+      }
+    }
+
+    metrics += await promClient.register.metrics();
+
+    if (metrics.startsWith('"') && metrics.endsWith('"')) {
+      metrics = metrics.slice(1, -1);
+    }
+
+    return metrics.trim();
+  };
+
+  public instrument(moduleName: SupportedModules): boolean {
+    if (!this.enabled) {
+      return false;
+    }
     try {
       if (moduleName === 'express') {
         const express = require('express');
@@ -318,9 +387,21 @@ export class OpenAPM extends LevitateEvents {
         const { NestFactory } = require('@nestjs/core');
         instrumentNestFactory(NestFactory, this._REDMiddleware);
       }
+      if (moduleName === 'nextjs') {
+        const nextServer = require('next/dist/server/next-server');
+        instrumentNextjs(
+          nextServer.default,
+          {
+            counter: this.requestsCounter,
+            histogram: this.requestsDurationHistogram
+          },
+          this
+        );
+      }
+
+      return true;
     } catch (error) {
       if (Object.keys(moduleNames).includes(moduleName)) {
-        console.log(error);
         throw new Error(
           `OpenAPM couldn't import the ${moduleNames[moduleName]} package, please install it.`
         );
