@@ -10,6 +10,10 @@ describe('Prisma', () => {
   let app: Express;
   let server: Server;
 
+  vi.mock('@prisma/client', async () => {
+    throw new Error('Cannot find module @prisma/client');
+  });
+
   beforeAll(async () => {
     openapm = new OpenAPM({
       enableMetricsServer: false
@@ -32,9 +36,6 @@ describe('Prisma', () => {
   });
 
   test('prisma:installed - false', async () => {
-    vi.doMock('@prisma/client', async () => {
-      throw new Error('Cannot find module @prisma/client');
-    });
     await makeRequest(app, '/api/10');
     await makeRequest(app, '/metrics');
 
