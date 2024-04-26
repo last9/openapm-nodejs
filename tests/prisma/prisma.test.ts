@@ -91,7 +91,7 @@ describe('Prisma', () => {
   test('metrics', async () => {
     await unmock();
     (openapm as OpenAPMExtended).clearSimpleCache();
-    await makeRequest(app, '/metrics');
-    expect(openapm.simpleCache['prisma:installed']).toBe(true);
+    const res = await makeRequest(app, '/metrics');
+    expect(res.text).toContain('prisma_client_queries_total');
   });
 });
