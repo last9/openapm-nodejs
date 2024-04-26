@@ -340,6 +340,9 @@ export class OpenAPM extends LevitateEvents {
 
   public getMetrics = async (): Promise<string> => {
     let metrics = '';
+    if (!this.enabled) {
+      return metrics;
+    }
     if (
       typeof this.simpleCache['prisma:installed'] === 'undefined' ||
       this.simpleCache['prisma:installed']
