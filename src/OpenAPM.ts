@@ -86,7 +86,7 @@ const moduleNames = {
 const packageJson = getPackageJson();
 
 export class OpenAPM extends LevitateEvents {
-  readonly simpleCache: Record<string, any> = {};
+  public simpleCache: Record<string, any> = {};
   private path: string;
   private metricsServerPort: number;
   private enabled: boolean;

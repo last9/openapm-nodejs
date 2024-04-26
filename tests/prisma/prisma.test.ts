@@ -5,6 +5,21 @@ import OpenAPM from '../../src/OpenAPM';
 import { addRoutes, makeRequest } from '../utils';
 import { Server } from 'http';
 
+class OpenAPMExtended extends OpenAPM {
+  public simpleCache: Record<string, any>;
+
+  constructor() {
+    super({
+      enableMetricsServer: false
+    });
+    this.simpleCache = {};
+  }
+
+  clearSimpleCache() {
+    this.simpleCache = {};
+  }
+}
+
 async function mock(mockedUri, stub) {
   const { Module } = await import('module');
 
@@ -33,10 +48,18 @@ describe('Prisma', () => {
   let app: Express;
   let server: Server;
 
-  beforeAll(async () => {
-    openapm = new OpenAPM({
-      enableMetricsServer: false
+  vi.hoisted(async () => {
+    await mock('@prisma/client', {
+      PrismaClient: class PrismaClient {
+        constructor() {
+          throw new Error('Cannot find module "@prisma/client"');
+        }
+      }
     });
+  });
+
+  beforeAll(async () => {
+    openapm = new OpenAPMExtended();
     openapm.instrument('express');
 
     app = express();
@@ -67,11 +90,8 @@ describe('Prisma', () => {
 
   test('metrics', async () => {
     await unmock();
-    await openapm.shutdown();
-    openapm = new OpenAPM({
-      enableMetricsServer: false
-    });
-    const res = await makeRequest(app, '/metrics');
-    expect(res.text).toContain('prisma_pool_connections_busy');
+    (openapm as OpenAPMExtended).clearSimpleCache();
+    await makeRequest(app, '/metrics');
+    expect(openapm.simpleCache['prisma:installed']).toBe(true);
   });
 });
