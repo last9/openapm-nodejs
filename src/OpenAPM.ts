@@ -2,7 +2,6 @@ import * as os from 'os';
 import http from 'http';
 import ResponseTime from 'response-time';
 import promClient from 'prom-client';
-
 import type {
   Counter,
   CounterConfiguration,
@@ -316,7 +315,7 @@ export class OpenAPM extends LevitateEvents {
       }
       if (moduleName === 'nestjs') {
         const { NestFactory } = require('@nestjs/core');
-        instrumentNestFactory(NestFactory, this._REDMiddleware);
+        instrumentNestFactory(NestFactory, this._REDMiddleware, this);
       }
     } catch (error) {
       if (Object.keys(moduleNames).includes(moduleName)) {
