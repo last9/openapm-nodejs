@@ -351,6 +351,7 @@ export class OpenAPM extends LevitateEvents {
         const prismaMetrics = prisma ? await prisma.$metrics.prometheus() : '';
         metrics += prisma ? prismaMetrics : '';
 
+        this.simpleCache['prisma:installed'] = true;
         await prisma.$disconnect();
       } catch (error) {
         this.simpleCache['prisma:installed'] = false;

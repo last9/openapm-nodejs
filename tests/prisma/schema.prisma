@@ -1,6 +1,6 @@
 datasource db {
   provider = "mysql"
-  url      = "mysql://root@localhost:3306/test_db"
+  url      = "mysql://root:password@localhost:3306/test_db?schema=public"
 }
 
 generator client {

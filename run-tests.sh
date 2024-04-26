@@ -25,7 +25,7 @@ runNextJsTests() {
 # Run Prisma tests
 runPrismaTests() {
   setupPrisma
-  npm run vitest -t ./tests/prisma/prisma.test.ts
+  npm run vitest -t ./tests/prisma/*.test.ts 
 }
 
 # Check if a variable is passed
