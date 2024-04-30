@@ -5,7 +5,7 @@
  *  */
 require('dotenv').config();
 const express = require('express');
-const { OpenAPM } = require('../dist/index.js');
+const { OpenAPM, setOpenAPMLabels } = require('../dist/index.js');
 const mysql2 = require('mysql2');
 
 const openapm = new OpenAPM({
@@ -24,7 +24,8 @@ const openapm = new OpenAPM({
     }
   },
   customPathsToMask: [/\b\d+(?:,\d+)*\b/gm],
-  excludeDefaultLabels: ['host', 'program']
+  excludeDefaultLabels: ['host', 'program'],
+  addtionalLabels: ['slug']
 });
 
 openapm.instrument('express');
@@ -66,6 +67,7 @@ app.post('/api/v2/product/search/:term', (req, res) => {
 });
 
 app.all('/api/v1/slug/:slug', (req, res) => {
+  setOpenAPMLabels({ slug: req.params.slug });
   res.status(200).json({});
 });
 

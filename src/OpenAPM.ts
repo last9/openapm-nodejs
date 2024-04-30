@@ -9,7 +9,7 @@ import type {
   Histogram,
   HistogramConfiguration
 } from 'prom-client';
-import type { Request } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import type { IncomingMessage, ServerResponse, Server } from 'http';
 
 import { getHostIpAddress, getPackageJson, getSanitizedPath } from './utils';
@@ -20,6 +20,16 @@ import { instrumentNestFactory } from './clients/nestjs';
 import { instrumentNextjs } from './clients/nextjs';
 
 import { LevitateConfig, LevitateEvents } from './levitate/events';
+import {
+  createAsyncLocalStorage,
+  storeAsyncLocalStorageInGlobalThis
+} from './async-local-storage';
+import {
+  HTTPRequestStore,
+  OpenAPMHttpRequestStoreKey,
+  getHTTPRequestStore,
+  runInHTTPRequestStore
+} from './async-local-storage.http';
 
 export type ExtractFromParams = {
   from: 'params';
@@ -59,9 +69,14 @@ export interface OpenAPMOptions {
   /** Any default labels you want to include */
   defaultLabels?: Record<string, string>;
   /** Accepts configuration for Prometheus Counter  */
-  requestsCounterConfig?: CounterConfiguration<string>;
+  requestsCounterConfig?: Omit<CounterConfiguration<string>, 'labelNames'>;
   /** Accepts configuration for Prometheus Histogram */
-  requestDurationHistogramConfig?: HistogramConfiguration<string>;
+  requestDurationHistogramConfig?: Omit<
+    HistogramConfiguration<string>,
+    'labelNames'
+  >;
+  /** Additional Labels for the HTTP requests */
+  addtionalLabels?: Array<string>;
   /** Extract labels from URL params, subdomain, header */
   extractLabels?: Record<string, ExtractFromParams>;
   /**
@@ -96,6 +111,7 @@ export class OpenAPM extends LevitateEvents {
   private defaultLabels?: Record<string, string>;
   readonly requestsCounterConfig: CounterConfiguration<string>;
   readonly requestDurationHistogramConfig: HistogramConfiguration<string>;
+  readonly requestLabels: Array<string> = [];
   private requestsCounter?: Counter;
   private requestsDurationHistogram?: Histogram;
   private extractLabels?: Record<string, ExtractFromParams>;
@@ -114,28 +130,16 @@ export class OpenAPM extends LevitateEvents {
     this.environment = options?.environment ?? 'production';
     this.program = packageJson?.name ?? '';
     this.defaultLabels = options?.defaultLabels;
-    this.requestsCounterConfig = options?.requestsCounterConfig ?? {
-      name: 'http_requests_total',
-      help: 'Total number of requests',
-      labelNames: [
-        'path',
-        'method',
-        'status',
-        ...(options?.extractLabels ? Object.keys(options?.extractLabels) : [])
-      ]
-    };
+    this.requestLabels = [
+      'path',
+      'method',
+      'status',
+      ...(options?.extractLabels ? Object.keys(options?.extractLabels) : []),
+      ...(options?.addtionalLabels ?? [])
+    ];
+    this.requestsCounterConfig = this.setRequestCounterConfig(options);
     this.requestDurationHistogramConfig =
-      options?.requestDurationHistogramConfig || {
-        name: 'http_requests_duration_milliseconds',
-        help: 'Duration of HTTP requests in milliseconds',
-        labelNames: [
-          'path',
-          'method',
-          'status',
-          ...(options?.extractLabels ? Object.keys(options?.extractLabels) : []) // If the extractLabels exists add the labels to the label set
-        ],
-        buckets: promClient.exponentialBuckets(0.25, 1.5, 31)
-      };
+      this.setRequestDurationHistogramConfig(options);
 
     this.extractLabels = options?.extractLabels ?? {};
     this.customPathsToMask = options?.customPathsToMask;
@@ -144,8 +148,56 @@ export class OpenAPM extends LevitateEvents {
     if (this.enabled) {
       this.initiateMetricsRoute();
       this.initiatePromClient();
+
+      const asyncStorage = createAsyncLocalStorage<HTTPRequestStore>();
+      storeAsyncLocalStorageInGlobalThis(
+        OpenAPMHttpRequestStoreKey,
+        asyncStorage
+      );
     }
   }
+
+  private setRequestCounterConfig = (options?: OpenAPMOptions) => {
+    const { requestsCounterConfig, extractLabels } = options ?? {};
+    const defaultConfig = {
+      name: 'http_requests_total',
+      help: 'Total number of requests',
+      labelNames: this.requestLabels
+    };
+
+    // @ts-ignore
+    const { labelNames: _, ...restConfig } = requestsCounterConfig ?? {};
+
+    return {
+      ...defaultConfig,
+      ...(restConfig ?? {})
+    };
+  };
+
+  private setRequestDurationHistogramConfig = (options?: OpenAPMOptions) => {
+    const { requestDurationHistogramConfig, extractLabels } = options ?? {};
+    const defaultConfig = {
+      name: 'http_requests_duration_milliseconds',
+      help: 'Duration of HTTP requests in milliseconds',
+      // labelNames: [
+      //   'path',
+      //   'method',
+      //   'status',
+      //   ...(options?.extractLabels ? Object.keys(options?.extractLabels) : []) // If the extractLabels exists add the labels to the label set
+      // ],
+      labelNames: this.requestLabels,
+      buckets: promClient.exponentialBuckets(0.25, 1.5, 31)
+    };
+
+    // @ts-ignore
+    const { labelNames: _, ...restConfig } =
+      requestDurationHistogramConfig ?? {};
+
+    return {
+      ...defaultConfig,
+      ...(restConfig ?? {})
+    };
+  };
 
   private getDefaultLabels = () => {
     const defaultLabels = {
@@ -283,53 +335,66 @@ export class OpenAPM extends LevitateEvents {
    * Middleware Function, which is essentially the response-time middleware with a callback that captures the
    * metrics
    */
-  private _REDMiddleware = ResponseTime(
-    (
-      req: IncomingMessage & Request,
-      res: ServerResponse<IncomingMessage>,
-      time: number
-    ) => {
-      if (!this.enabled) {
-        return;
-      }
-      const sanitizedPathname = getSanitizedPath(req.originalUrl ?? '/');
-      // Extract labels from the request params
-      const { pathname, labels: parsedLabelsFromPathname } =
-        this.parseLabelsFromParams(sanitizedPathname, req.params);
 
-      // Skip the OPTIONS requests not to blow up cardinality. Express does not provide
-      // information about the route for OPTIONS requests, which makes it very
-      // hard to detect correct PATH. Until we fix it properly, the requests are skipped
-      // to not blow up the cardinality.
-      if (!req.route && req.method === 'OPTIONS') {
-        return;
-      }
+  private _REDMiddleware = (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    runInHTTPRequestStore(() => {
+      ResponseTime(
+        (
+          req: IncomingMessage & Request,
+          res: ServerResponse<IncomingMessage>,
+          time: number
+        ) => {
+          if (!this.enabled) {
+            return;
+          }
+          const store = getHTTPRequestStore();
+          const sanitizedPathname = getSanitizedPath(req.originalUrl ?? '/');
+          // Extract labels from the request params
+          const { pathname, labels: parsedLabelsFromPathname } =
+            this.parseLabelsFromParams(sanitizedPathname, req.params);
 
-      // Make sure you copy baseURL in case of nested routes.
-      const path = req.route ? req.baseUrl + req.route?.path : pathname;
+          // Skip the OPTIONS requests not to blow up cardinality. Express does not provide
+          // information about the route for OPTIONS requests, which makes it very
+          // hard to detect correct PATH. Until we fix it properly, the requests are skipped
+          // to not blow up the cardinality.
+          if (!req.route && req.method === 'OPTIONS') {
+            return;
+          }
 
-      const labels: Record<string, string> = {
-        path,
-        status: res.statusCode.toString(),
-        method: req.method as string,
-        ...parsedLabelsFromPathname
-      };
+          // Make sure you copy baseURL in case of nested routes.
+          const path = req.route ? req.baseUrl + req.route?.path : pathname;
 
-      // Create an array of arguments in the same sequence as label names
-      const requestsCounterArgs = this.requestsCounterConfig.labelNames?.map(
-        (labelName) => {
-          return labels[labelName] ?? '';
+          const labels: Record<string, string> = {
+            path,
+            status: res.statusCode.toString(),
+            method: req.method as string,
+            ...parsedLabelsFromPathname,
+            ...(store?.labels ?? {})
+          };
+
+          // Create an array of arguments in the same sequence as label names
+          const requestsCounterArgs =
+            this.requestsCounterConfig.labelNames?.map((labelName) => {
+              return labels[labelName] ?? '';
+            });
+
+          try {
+            if (requestsCounterArgs) {
+              this.requestsCounter?.inc(labels);
+              this.requestsDurationHistogram?.observe(labels, time);
+              // ?.labels(...requestsCounterArgs)
+            }
+          } catch (err) {
+            console.error('OpenAPM:', err);
+          }
         }
-      );
-
-      if (requestsCounterArgs) {
-        this.requestsCounter?.labels(...requestsCounterArgs).inc();
-        this.requestsDurationHistogram
-          ?.labels(...requestsCounterArgs)
-          .observe(time);
-      }
-    }
-  );
+      )(req, res, next);
+    });
+  };
 
   /**
    * Middleware Function, which is essentially the response-time middleware with a callback that captures the
