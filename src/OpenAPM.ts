@@ -179,12 +179,6 @@ export class OpenAPM extends LevitateEvents {
     const defaultConfig = {
       name: 'http_requests_duration_milliseconds',
       help: 'Duration of HTTP requests in milliseconds',
-      // labelNames: [
-      //   'path',
-      //   'method',
-      //   'status',
-      //   ...(options?.extractLabels ? Object.keys(options?.extractLabels) : []) // If the extractLabels exists add the labels to the label set
-      // ],
       labelNames: this.requestLabels,
       buckets: promClient.exponentialBuckets(0.25, 1.5, 31)
     };
