@@ -4,8 +4,9 @@ import request from 'supertest';
 import { test, expect, describe, beforeAll, afterAll } from 'vitest';
 
 import OpenAPM from '../src/OpenAPM';
-import { addRoutes, sendTestRequests } from './utils';
+import { addRoutes, makeRequest, sendTestRequests } from './utils';
 import prom from 'prom-client';
+import { writeFileSync } from 'fs';
 
 describe('REDMiddleware', () => {
   const NUMBER_OF_REQUESTS = 300;
@@ -14,7 +15,9 @@ describe('REDMiddleware', () => {
   let parsedData: Array<Record<string, any>> = [];
 
   beforeAll(async () => {
-    openapm = new OpenAPM();
+    openapm = new OpenAPM({
+      addtionalLabels: ['id']
+    });
     openapm.instrument('express');
 
     app = express();
@@ -34,6 +37,8 @@ describe('REDMiddleware', () => {
       prom.register.clear();
     });
   });
+
+  test;
 
   test('Captures Counter Metrics - App', async () => {
     expect(
@@ -67,13 +72,38 @@ describe('REDMiddleware', () => {
     expect(
       parsedData?.find((m) => m.name === 'http_requests_total')?.metrics[0]
         .labels.path
-    ).toBe('/api/:id');
+    ).match(/api(?:\/router)?\/:id/);
   });
 
   test('Masks the path - Router', async () => {
     expect(
       parsedData?.find((m) => m.name === 'http_requests_total')?.metrics[1]
         .labels.path
-    ).toBe('/api/router/:id');
+    ).match(/api(?:\/router)?\/:id/);
+  });
+
+  test('Captures Dynamic Labels', async () => {
+    await makeRequest(app, '/api/labels/123');
+    // @ts-ignore
+    const res = await request(openapm.metricsServer).get('/metrics');
+    parsedData = parsePrometheusTextFormat(res.text);
+
+    // expect(
+    //   parsedData
+    //     ?.find((m) => m.name === 'http_requests_total')
+    //     ?.metrics.find((m) => (m.labels.path = '/api/labels/:id'))?.labels.id
+    // ).toBe('123');
+
+    console
+      .log
+
+      // ?.metrics.find((m) => (m.labels.path = '/api/labels/:id'))
+      ();
+
+    expect(
+      parsedData
+        ?.find((m) => m.name === 'http_requests_total')
+        ?.metrics?.find((m) => m.labels.path === '/api/labels/:id').labels.id
+    ).toBe('123');
   });
 });

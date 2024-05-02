@@ -1,17 +1,25 @@
 import request from 'supertest';
 import express from 'express';
 import type { Express } from 'express';
+import { setOpenAPMLabels } from '../src/async-local-storage.http';
 
 export const addRoutes = (app: Express) => {
   const router = express.Router();
 
   router.get('/:id', (req, res) => {
     const { id } = req.params;
+    ``;
     res.status(200).send(id);
   });
   app.use('/api/router/', router);
   app.get('/api/:id', (req, res) => {
     const { id } = req.params;
+    res.status(200).send(id);
+  });
+
+  app.get('/api/labels/:id', (req, res) => {
+    const { id } = req.params;
+    setOpenAPMLabels({ id });
     res.status(200).send(id);
   });
 
