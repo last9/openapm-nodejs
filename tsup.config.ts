@@ -6,7 +6,7 @@ export default defineConfig({
   format: ['cjs', 'esm'],
   legacyOutput: true,
   cjsInterop: true,
-  minify: true,
+  minify: false,
   treeshake: true,
   shims: true,
   external: ['mysql2', '@nestjs/core', '@prisma/client', 'express', 'next'],

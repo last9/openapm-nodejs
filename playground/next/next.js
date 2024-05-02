@@ -5,8 +5,10 @@ const { parse } = require('url');
 const { OpenAPM } = require('../../dist/index.js');
 
 const openapm = new OpenAPM({
-  metricsServerPort: 9098
+  metricsServerPort: 9098,
+  addtionalLabels: ['slug']
 });
+
 openapm.instrument('nextjs');
 
 async function main() {

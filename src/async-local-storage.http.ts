@@ -12,18 +12,15 @@ export const getHTTPRequestStore = () => {
   )?.getStore();
 };
 
-export const runInHTTPRequestStore = (fn: any) => {
+export const runInHTTPRequestStore = <R>(fn: any) => {
   const asyncLocalStorage = getAsyncLocalStorage<HTTPRequestStore>(
     OpenAPMHttpRequestStoreKey
   );
-
-  asyncLocalStorage.run(
+  return asyncLocalStorage.run<R>(
     {
       labels: {}
     },
-    () => {
-      fn();
-    }
+    fn
   );
 };
 
