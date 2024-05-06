@@ -88,18 +88,6 @@ describe('REDMiddleware', () => {
     const res = await request(openapm.metricsServer).get('/metrics');
     parsedData = parsePrometheusTextFormat(res.text);
 
-    // expect(
-    //   parsedData
-    //     ?.find((m) => m.name === 'http_requests_total')
-    //     ?.metrics.find((m) => (m.labels.path = '/api/labels/:id'))?.labels.id
-    // ).toBe('123');
-
-    console
-      .log
-
-      // ?.metrics.find((m) => (m.labels.path = '/api/labels/:id'))
-      ();
-
     expect(
       parsedData
         ?.find((m) => m.name === 'http_requests_total')

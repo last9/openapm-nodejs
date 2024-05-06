@@ -76,4 +76,5 @@ export const sendTestRequestNextJS = async (app: Express, num: number) => {
   }
 
   await makeRequest(app, endpoint);
+  await makeRequest(app, '/labels');
 };

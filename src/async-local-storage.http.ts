@@ -1,4 +1,8 @@
-import { getAsyncLocalStorage } from './async-local-storage';
+import {
+  createAsyncLocalStorage,
+  getAsyncLocalStorage,
+  storeAsyncLocalStorageInGlobalThis
+} from './async-local-storage';
 
 export const OpenAPMHttpRequestStoreKey = '__OPENAPM__httpRequestStore';
 
@@ -13,9 +17,16 @@ export const getHTTPRequestStore = () => {
 };
 
 export const runInHTTPRequestStore = <R>(fn: any) => {
-  const asyncLocalStorage = getAsyncLocalStorage<HTTPRequestStore>(
+  let asyncLocalStorage = getAsyncLocalStorage<HTTPRequestStore>(
     OpenAPMHttpRequestStoreKey
   );
+  if (!asyncLocalStorage) {
+    asyncLocalStorage = createAsyncLocalStorage<HTTPRequestStore>();
+    storeAsyncLocalStorageInGlobalThis(
+      OpenAPMHttpRequestStoreKey,
+      asyncLocalStorage
+    );
+  }
   return asyncLocalStorage.run<R>(
     {
       labels: {}

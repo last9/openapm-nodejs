@@ -196,8 +196,8 @@ export class OpenAPM extends LevitateEvents {
   private getDefaultLabels = () => {
     const defaultLabels = {
       environment: this.environment,
-      program: packageJson.name,
-      version: packageJson.version,
+      program: packageJson?.name ?? '',
+      version: packageJson?.version ?? '',
       host: os.hostname(),
       ip: getHostIpAddress(),
       ...this.defaultLabels

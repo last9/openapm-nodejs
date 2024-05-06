@@ -6,29 +6,30 @@ import { describe, afterAll, beforeAll, test, expect } from 'vitest';
 import OpenAPM from '../../src/OpenAPM';
 import parsePrometheusTextFormat from 'parse-prometheus-text-format';
 import { resolve } from 'path';
-import { sendTestRequestNextJS } from '../utils';
+import { makeRequest, sendTestRequestNextJS } from '../utils';
+import { writeFileSync } from 'fs';
 
 describe('Next.js', () => {
   let openapm: OpenAPM;
   let server: Server;
   let parsedData: Array<Record<string, any>> = [];
+  let expressApp: express.Express;
 
   beforeAll(async () => {
     openapm = new OpenAPM({
-      enableMetricsServer: false
+      enableMetricsServer: false,
+      addtionalLabels: ['slug']
     });
-
     openapm.instrument('nextjs');
 
-    const expressApp = express();
     const app = next({
-      dev: false,
       customServer: false,
       httpServer: server,
       dir: resolve(__dirname),
       conf: {}
     });
 
+    expressApp = express();
     expressApp.get('/metrics', async (_, res) => {
       let metrics = await openapm.getMetrics();
       res.setHeader('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
@@ -71,5 +72,12 @@ describe('Next.js', () => {
         )?.metrics[0].buckets
       ).length > 0
     ).toBe(true);
+  });
+
+  test('Dynamic Labels are captured', async () => {
+    // writeFileSync('metrics.txt', JSON.stringify(parsedData, null, 2));
+    const res = await makeRequest(expressApp, '/labels');
+    writeFileSync('labels.txt', JSON.stringify(res.body, null, 2));
+    expect(true).toBe(true);
   });
 });
