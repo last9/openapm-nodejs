@@ -10,7 +10,3 @@ export const storeAsyncLocalStorageInGlobalThis = <T>(
 export const createAsyncLocalStorage = <T>() => {
   return new AsyncLocalStorage<T>();
 };
-
-export const getAsyncLocalStorage = <T>(key: string) => {
-  return (globalThis as any)[key] as AsyncLocalStorage<T>;
-};

@@ -1,32 +1,16 @@
-import {
-  createAsyncLocalStorage,
-  getAsyncLocalStorage,
-  storeAsyncLocalStorageInGlobalThis
-} from './async-local-storage';
-
-export const OpenAPMHttpRequestStoreKey = '__OPENAPM__httpRequestStore';
+import { createAsyncLocalStorage } from './async-local-storage';
 
 export type HTTPRequestStore = {
   labels: Record<string, string>;
 };
 
+const asyncLocalStorage = createAsyncLocalStorage<HTTPRequestStore>();
+
 export const getHTTPRequestStore = () => {
-  return getAsyncLocalStorage<HTTPRequestStore>(
-    OpenAPMHttpRequestStoreKey
-  )?.getStore();
+  return asyncLocalStorage.getStore();
 };
 
 export const runInHTTPRequestStore = <R>(fn: any) => {
-  let asyncLocalStorage = getAsyncLocalStorage<HTTPRequestStore>(
-    OpenAPMHttpRequestStoreKey
-  );
-  if (!asyncLocalStorage) {
-    asyncLocalStorage = createAsyncLocalStorage<HTTPRequestStore>();
-    storeAsyncLocalStorageInGlobalThis(
-      OpenAPMHttpRequestStoreKey,
-      asyncLocalStorage
-    );
-  }
   return asyncLocalStorage.run<R>(
     {
       labels: {}
@@ -38,6 +22,9 @@ export const runInHTTPRequestStore = <R>(fn: any) => {
 export const setOpenAPMLabels = (labels: Record<string, string>) => {
   const store = getHTTPRequestStore();
   if (typeof store !== 'undefined') {
-    store.labels = labels;
+    store.labels = {
+      ...store.labels,
+      ...labels
+    };
   }
 };

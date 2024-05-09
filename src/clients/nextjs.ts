@@ -93,45 +93,45 @@ const wrappedHandler = (
     histogram?: Histogram;
   }
 ) => {
-  return async function (
-    ...args: Parameters<ReturnType<NextNodeServer['getRequestHandler']>>
-  ) {
-    const [req, res] = args;
-    const start = process.hrtime.bigint();
-    return runInHTTPRequestStore<
-      ReturnType<ReturnType<NextNodeServer['getRequestHandler']>>
-    >(async () => {
-      const result = handler(...args);
-      if (result instanceof Promise) {
-        await result;
-      }
-      const end = process.hrtime.bigint();
-      const duration = Number(end - start) / 1e6;
-      const parsedPath = ctx.getParameterizedRoute(
-        parsedPathname(req.url ?? '/')
-      );
+  return runInHTTPRequestStore<ReturnType<NextNodeServer['getRequestHandler']>>(
+    () =>
+      async function (
+        ...args: Parameters<ReturnType<NextNodeServer['getRequestHandler']>>
+      ) {
+        const [req, res] = args;
+        const start = process.hrtime.bigint();
 
-      const store = getHTTPRequestStore();
-      ctx.counter?.inc({
-        path: parsedPath !== '' ? parsedPath : '/',
-        method: req.method ?? 'GET',
-        status: res.statusCode?.toString() ?? '500',
-        ...(store?.labels ?? {})
-      });
+        const result = handler(...args);
+        if (result instanceof Promise) {
+          await result;
+        }
+        const end = process.hrtime.bigint();
+        const duration = Number(end - start) / 1e6;
+        const parsedPath = ctx.getParameterizedRoute(
+          parsedPathname(req.url ?? '/')
+        );
 
-      ctx.histogram?.observe(
-        {
+        const store = getHTTPRequestStore();
+        ctx.counter?.inc({
           path: parsedPath !== '' ? parsedPath : '/',
           method: req.method ?? 'GET',
           status: res.statusCode?.toString() ?? '500',
           ...(store?.labels ?? {})
-        },
-        duration
-      );
+        });
 
-      return result;
-    });
-  };
+        ctx.histogram?.observe(
+          {
+            path: parsedPath !== '' ? parsedPath : '/',
+            method: req.method ?? 'GET',
+            status: res.statusCode?.toString() ?? '500',
+            ...(store?.labels ?? {})
+          },
+          duration
+        );
+
+        return result;
+      }
+  );
 };
 
 export const instrumentNextjs = (
