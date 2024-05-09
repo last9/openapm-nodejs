@@ -29,8 +29,8 @@ runPrismaTests() {
 }
 
 # Check if a variable is passed
-if [ "$1" = "metrics" ]; then
-  npm run vitest -t ./tests/metrics.test.ts 
+if [ "$1" = "express" ]; then
+  npm run vitest -t ./tests/express.test.ts 
 elif [ "$1" = "nextjs" ]; then
   # Run Next.js tests without setting up
   if [ "$2" = "--no-setup" ]; then

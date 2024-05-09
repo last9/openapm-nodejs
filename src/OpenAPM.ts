@@ -21,12 +21,6 @@ import { instrumentNextjs } from './clients/nextjs';
 
 import { LevitateConfig, LevitateEvents } from './levitate/events';
 import {
-  createAsyncLocalStorage,
-  storeAsyncLocalStorageInGlobalThis
-} from './async-local-storage';
-import {
-  HTTPRequestStore,
-  OpenAPMHttpRequestStoreKey,
   getHTTPRequestStore,
   runInHTTPRequestStore
 } from './async-local-storage.http';
@@ -148,12 +142,6 @@ export class OpenAPM extends LevitateEvents {
     if (this.enabled) {
       this.initiateMetricsRoute();
       this.initiatePromClient();
-
-      const asyncStorage = createAsyncLocalStorage<HTTPRequestStore>();
-      storeAsyncLocalStorageInGlobalThis(
-        OpenAPMHttpRequestStoreKey,
-        asyncStorage
-      );
     }
   }
 
