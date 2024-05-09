@@ -7,10 +7,7 @@ import { join } from 'path';
 import { getRouteRegex } from 'next/dist/shared/lib/router/utils/route-regex';
 import { getRouteMatcher } from 'next/dist/shared/lib/router/utils/route-matcher';
 import OpenAPM from '../OpenAPM';
-import {
-  getHTTPRequestStore,
-  runInHTTPRequestStore
-} from '../async-local-storage.http';
+import { getHTTPRequestStore } from '../async-local-storage.http';
 
 const DOT_NEXT = join(process.cwd(), '.next');
 
@@ -93,45 +90,42 @@ const wrappedHandler = (
     histogram?: Histogram;
   }
 ) => {
-  return runInHTTPRequestStore<ReturnType<NextNodeServer['getRequestHandler']>>(
-    () =>
-      async function (
-        ...args: Parameters<ReturnType<NextNodeServer['getRequestHandler']>>
-      ) {
-        const [req, res] = args;
-        const start = process.hrtime.bigint();
+  return async function (
+    ...args: Parameters<ReturnType<NextNodeServer['getRequestHandler']>>
+  ) {
+    const [req, res] = args;
+    const start = process.hrtime.bigint();
 
-        const result = handler(...args);
-        if (result instanceof Promise) {
-          await result;
-        }
-        const end = process.hrtime.bigint();
-        const duration = Number(end - start) / 1e6;
-        const parsedPath = ctx.getParameterizedRoute(
-          parsedPathname(req.url ?? '/')
-        );
+    const result = handler(...args);
+    if (result instanceof Promise) {
+      await result;
+    }
+    const end = process.hrtime.bigint();
+    const duration = Number(end - start) / 1e6;
+    const parsedPath = ctx.getParameterizedRoute(
+      parsedPathname(req.url ?? '/')
+    );
 
-        const store = getHTTPRequestStore();
-        ctx.counter?.inc({
-          path: parsedPath !== '' ? parsedPath : '/',
-          method: req.method ?? 'GET',
-          status: res.statusCode?.toString() ?? '500',
-          ...(store?.labels ?? {})
-        });
+    const store = getHTTPRequestStore();
+    ctx.counter?.inc({
+      path: parsedPath !== '' ? parsedPath : '/',
+      method: req.method ?? 'GET',
+      status: res.statusCode?.toString() ?? '500',
+      ...(store?.labels ?? {})
+    });
 
-        ctx.histogram?.observe(
-          {
-            path: parsedPath !== '' ? parsedPath : '/',
-            method: req.method ?? 'GET',
-            status: res.statusCode?.toString() ?? '500',
-            ...(store?.labels ?? {})
-          },
-          duration
-        );
+    ctx.histogram?.observe(
+      {
+        path: parsedPath !== '' ? parsedPath : '/',
+        method: req.method ?? 'GET',
+        status: res.statusCode?.toString() ?? '500',
+        ...(store?.labels ?? {})
+      },
+      duration
+    );
 
-        return result;
-      }
-  );
+    return result;
+  };
 };
 
 export const instrumentNextjs = (
