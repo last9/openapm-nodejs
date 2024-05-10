@@ -183,6 +183,14 @@ const openapm = new OpenAPM({
 })
 ```
 
+12. `additionalLabels`: (Optional) Accepts an array of label keys that will be emitted with the metrics. This option is used in tandem with the `setOpenAPMLabels` API. Checkout [API Reference](#api-reference)
+
+```
+const openapm = new OpenAPM({
+  additionalLabels: ['slug']
+})
+```
+
 ## API Reference
 
 1. `instrument`: Used to instrument supported technologies. Refer the [usage](#usage) section.
@@ -223,6 +231,22 @@ const gracefullyShutdown = () => {
 
 process.on('SIGINT', gracefullyShutdown);
 process.on('SIGTERM', gracefullyShutdown);
+```
+
+4. `setOpenAPMLabels`: Unlike other APIs. You can directly import `setOpenAPMLabels` in any file to set custom labels to the request. Make sure to mention the label key in `additionalLabels` option. This function can set multiple labels in the metrics emitted by the ongoing HTTP request.
+
+Note: `setOpenAPMLabels` currently works with **express** and **Nest.js** only.
+
+```js
+import { OpenAPM, setOpenAPMLabels } from '@last9/openapm';
+
+const openapm = new OpenAPM({
+  additionalLabels: ['slug']
+});
+
+const handler = () => {
+  setOpenAPMLabels({ slug: 'org-slug' });
+};
 ```
 
 ## Setup locally

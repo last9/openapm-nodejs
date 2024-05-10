@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0]
+
+### Added
+
+- Optional `additionalLabels` option. The added label keys will be emitted with all metrics if the label value is set using `setOpenAPMLabels`.
+- `setOpenAPMLabels` function to set label to the metrics emitted by an HTTP request.
+
 ## [0.8.0]
 
 ### Added
