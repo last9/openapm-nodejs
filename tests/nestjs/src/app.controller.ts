@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
+import { setOpenAPMLabels } from '../../../src/async-local-storage.http';
 
 @Controller()
 export class AppController {
@@ -7,6 +8,7 @@ export class AppController {
 
   @Get()
   getHello(): string {
-    return this.appService.getHello();
+    setOpenAPMLabels({ slug: 'custom-slug' });
+    return this.appService?.getHello();
   }
 }

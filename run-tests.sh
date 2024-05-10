@@ -22,6 +22,11 @@ runNextJsTests() {
   npm run vitest -t ./tests/nextjs/nextjs.test.ts
 }
 
+# Run Nest.js tests
+runNestJsTests() {
+  npm run vitest -t ./tests/nestjs/nestjs.test.ts
+}
+
 # Run Prisma tests
 runPrismaTests() {
   setupPrisma
@@ -38,6 +43,8 @@ elif [ "$1" = "nextjs" ]; then
   else
     runNextJsTests
   fi
+elif [ "$1" = "nestjs" ]; then
+    runNestJsTests
 elif [ "$1" = "prisma" ]; then
   runPrismaTests
 else

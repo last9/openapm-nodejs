@@ -1,10 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { setOpenAPMLabels } from '../../../';
+import { setOpenAPMLabels } from '../../../src/async-local-storage.http';
 
 @Injectable()
 export class AppService {
   getHello(): string {
-    setOpenAPMLabels({ 'custom-label': 'custom-value' });
     return 'Hello World!';
   }
 }
