@@ -439,8 +439,20 @@ export class OpenAPM extends LevitateEvents {
         const nextServer = require(path.resolve(
           'node_modules/next/dist/server/next-server.js'
         ));
+
         instrumentNextjs(
           nextServer.default,
+          {
+            loadManifest: require(path.resolve(
+              'node_modules/next/dist/server/load-manifest.js'
+            )),
+            getRouteRegex: require(path.resolve(
+              'node_modules/next/dist/shared/lib/router/utils/route-regex.js'
+            )),
+            getRouteMatcher: require(path.resolve(
+              'node_modules/next/dist/shared/lib/router/utils/route-matcher.js'
+            ))
+          },
           {
             counter: this.requestsCounter,
             histogram: this.requestsDurationHistogram
