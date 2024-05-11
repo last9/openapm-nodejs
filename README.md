@@ -52,7 +52,7 @@ process.on('SIGTERM', gracefullyShutdown);
 1. [Express](#express)
 2. [MySQL](#mysql)
 3. [NestJS](#nestjs)
-4. [Next.js][#nextjs]
+4. [Next.js](#nextjs)
 
 ### Express
 
@@ -175,9 +175,17 @@ const openapm = new OpenAPM({
 }
 ```
 
+11. `enabled`: (Optional) Defaults to `true`. When set to `false` OpenAPM will be disabled and no metrics will be collected or emitted.
+
+```
+const openapm = new OpenAPM({
+  enabled: process.env.NODE_ENV === 'production'
+})
+```
+
 ## API Reference
 
-1. `instrument`: Used to instrument supported technologies. Refer the [usage][#usage] section.
+1. `instrument`: Used to instrument supported technologies. Refer the [usage](#usage) section.
 
 2. `getMetrics`: Returns a Promise of string which contains metrics in Prometheus exposition format. You can use this function to expose a metrics endpoint if `enableMetricsServer` is set to false. For example,
 
