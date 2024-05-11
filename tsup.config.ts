@@ -4,7 +4,7 @@ import glob from 'tiny-glob';
 export default defineConfig(async () => ({
   entry: await glob('src/**/*.ts'),
   sourcemap: false,
-  bundle: true,
+  bundle: false,
   format: ['cjs', 'esm'],
   legacyOutput: true,
   cjsInterop: true,

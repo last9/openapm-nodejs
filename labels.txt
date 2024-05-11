@@ -1,0 +1,7 @@
+{
+  "status": 200,
+  "body": {
+    "message": "GET method called",
+    "store": "undefined"
+  }
+}

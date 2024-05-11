@@ -2,6 +2,7 @@ import * as os from 'os';
 import http from 'http';
 import ResponseTime from 'response-time';
 import promClient from 'prom-client';
+import path from 'path';
 
 import type {
   Counter,
@@ -435,7 +436,9 @@ export class OpenAPM extends LevitateEvents {
         instrumentNestFactory(NestFactory, this._REDMiddleware);
       }
       if (moduleName === 'nextjs') {
-        const nextServer = require('next/dist/src/server/next-server');
+        const nextServer = require(path.resolve(
+          'node_modules/next/dist/server/next-server.js'
+        ));
         instrumentNextjs(
           nextServer.default,
           {
@@ -448,6 +451,7 @@ export class OpenAPM extends LevitateEvents {
 
       return true;
     } catch (error) {
+      console.error('OpenAPM:', error);
       if (Object.keys(moduleNames).includes(moduleName)) {
         throw new Error(
           `OpenAPM couldn't import the ${moduleNames[moduleName]} package, please install it.`

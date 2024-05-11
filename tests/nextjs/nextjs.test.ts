@@ -75,7 +75,6 @@ describe('Next.js', () => {
   });
 
   test('Dynamic Labels are captured', async () => {
-    // writeFileSync('metrics.txt', JSON.stringify(parsedData, null, 2));
     const res = await makeRequest(expressApp, '/labels');
     writeFileSync('labels.txt', JSON.stringify(res.body, null, 2));
     expect(true).toBe(true);
