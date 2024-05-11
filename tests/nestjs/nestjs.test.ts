@@ -12,7 +12,7 @@ describe('Nest.js', () => {
 
   async function bootstrap() {
     openapm = new OpenAPM({
-      addtionalLabels: ['slug'],
+      additionalLabels: ['slug'],
     });
     openapm.instrument('nestjs');
 

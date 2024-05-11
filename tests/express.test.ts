@@ -16,7 +16,7 @@ describe('REDMiddleware', () => {
 
   beforeAll(async () => {
     openapm = new OpenAPM({
-      addtionalLabels: ['id']
+      additionalLabels: ['id']
     });
     openapm.instrument('express');
 

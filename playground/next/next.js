@@ -6,7 +6,7 @@ const { OpenAPM } = require('../../dist/index.js');
 
 const openapm = new OpenAPM({
   metricsServerPort: 9098,
-  addtionalLabels: ['slug']
+  additionalLabels: ['slug']
 });
 
 openapm.instrument('nextjs');

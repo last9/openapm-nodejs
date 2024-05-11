@@ -18,7 +18,7 @@ describe('Next.js', () => {
   beforeAll(async () => {
     openapm = new OpenAPM({
       enableMetricsServer: false,
-      addtionalLabels: ['slug']
+      additionalLabels: ['slug']
     });
     openapm.instrument('nextjs');
 

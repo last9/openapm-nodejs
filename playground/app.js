@@ -25,7 +25,7 @@ const openapm = new OpenAPM({
   },
   customPathsToMask: [/\b\d+(?:,\d+)*\b/gm],
   excludeDefaultLabels: ['host', 'program'],
-  addtionalLabels: ['slug']
+  additionalLabels: ['slug']
 });
 
 openapm.instrument('express');

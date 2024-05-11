@@ -70,7 +70,7 @@ export interface OpenAPMOptions {
     'labelNames'
   >;
   /** Additional Labels for the HTTP requests */
-  addtionalLabels?: Array<string>;
+  additionalLabels?: Array<string>;
   /** Extract labels from URL params, subdomain, header */
   extractLabels?: Record<string, ExtractFromParams>;
   /**
@@ -129,7 +129,7 @@ export class OpenAPM extends LevitateEvents {
       'method',
       'status',
       ...(options?.extractLabels ? Object.keys(options?.extractLabels) : []),
-      ...(options?.addtionalLabels ?? [])
+      ...(options?.additionalLabels ?? [])
     ];
     this.requestsCounterConfig = this.setRequestCounterConfig(options);
     this.requestDurationHistogramConfig =
