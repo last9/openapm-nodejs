@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const next = require('next');
 const { parse } = require('url');
-const { OpenAPM } = require('../../dist/index.js');
+const { OpenAPM } = require('../../dist/src/index.js');
 
 const openapm = new OpenAPM({
   metricsServerPort: 9098,

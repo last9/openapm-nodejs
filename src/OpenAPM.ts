@@ -435,7 +435,7 @@ export class OpenAPM extends LevitateEvents {
         instrumentNestFactory(NestFactory, this._REDMiddleware);
       }
       if (moduleName === 'nextjs') {
-        const nextServer = require('next/dist/server/next-server');
+        const nextServer = require('next/dist/src/server/next-server');
         instrumentNextjs(
           nextServer.default,
           {

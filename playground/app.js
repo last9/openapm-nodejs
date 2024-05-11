@@ -5,7 +5,7 @@
  *  */
 require('dotenv').config();
 const express = require('express');
-const { OpenAPM, setOpenAPMLabels } = require('../dist/index.js');
+const { OpenAPM, setOpenAPMLabels } = require('../dist/src/index.js');
 const mysql2 = require('mysql2');
 
 const openapm = new OpenAPM({
