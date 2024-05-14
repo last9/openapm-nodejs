@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Optional `additionalLabels` option. The added label keys will be emitted with all metrics if the label value is set using `setOpenAPMLabels`.
-- `setOpenAPMLabels` function to set label to the metrics emitted by an HTTP request.
+- `setOpenAPMLabels` function to set custom labels to the metrics emitted by OpenAPM.
 
 ## [0.8.0]
 
@@ -18,8 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Optional `enableMetricsServer` option to enable or disable the metrics server.
 - Optional `enabled` option to conditionally enable or disable OpenAPM.
-- Exposed `getMetrics` function to get the metrics in prometheus exposition format.
-- Add support to instrument applications based on `Next.js` framework in Node.js environment.
+- Exposed the `getMetrics` function to get the metrics in prometheus exposition format.
+- Add support to instrument applications based on the `Next.js` framework in the Node.js environment.
 - Automatically add Prisma metrics if they are available.
 
 ## [0.7.0] - 2024-04-01
@@ -38,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- The ability to automatically detect the correct `path` labels based on routes defined by users in their applications. This will solve the cardinality blowup of endpoints not being folded correctly.
+- The ability to automatically detect the correct `path` labels based on user routes in their applications. This will solve the cardinality blowup of endpoints that are not being folded correctly.
 
 ### Deprecated
 
@@ -49,7 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Optional [Change Events](https://docs.last9.io/docs/change-events) Support. Track `application_start` event for Express applications in Levitate along with other APM metrics.
+- Optional [Change Events](https://docs.last9.io/docs/change-events) Support. Track the `application_start` event for Express applications in Levitate along with other APM metrics.
 
 ## [0.4.0] - 2023-11-2
 
@@ -66,7 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add `extractLabels` to the options to extract any labels from the URL params such as a tenant or org name allowing support for multi-tenant monitoring.
+- Add `extractable` to the options to extract any labels from the URL params, such as a tenant or org name, allowing support for multi-tenant monitoring.
 - Gracefully shutdown metrics server
 
 ## [0.2.2] - 2023-08-28
