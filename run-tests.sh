@@ -22,6 +22,11 @@ runNextJsTests() {
   npm run vitest -t ./tests/nextjs/nextjs.test.ts
 }
 
+# Run Nest.js tests
+runNestJsTests() {
+  npm run vitest -t ./tests/nestjs/nestjs.test.ts
+}
+
 # Run Prisma tests
 runPrismaTests() {
   setupPrisma
@@ -29,13 +34,17 @@ runPrismaTests() {
 }
 
 # Check if a variable is passed
-if [ "$1" = "nextjs" ]; then
+if [ "$1" = "express" ]; then
+  npm run vitest -t ./tests/express.test.ts 
+elif [ "$1" = "nextjs" ]; then
   # Run Next.js tests without setting up
   if [ "$2" = "--no-setup" ]; then
     npm run vitest -t ./tests/nextjs/nextjs.test.ts
   else
     runNextJsTests
   fi
+elif [ "$1" = "nestjs" ]; then
+    runNestJsTests
 elif [ "$1" = "prisma" ]; then
   runPrismaTests
 else

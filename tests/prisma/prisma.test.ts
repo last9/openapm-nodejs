@@ -69,7 +69,7 @@ describe('Prisma', () => {
     });
 
     addRoutes(app);
-    server = app.listen(3003);
+    server = app.listen(3004);
   });
 
   afterAll(async () => {

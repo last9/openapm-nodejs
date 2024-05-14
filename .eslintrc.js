@@ -7,6 +7,7 @@ module.exports = {
     'func-call-spacing': 'off',
     'space-before-function-paren': 'off',
     '@typescript-eslint/no-var-requires': 'off',
-    '@typescript-eslint/ban-ts-comment': 'off'
+    '@typescript-eslint/ban-ts-comment': 'off',
+    indent: '10'
   }
 };

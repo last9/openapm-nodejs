@@ -1,13 +1,12 @@
 import * as os from 'os';
 import type * as Express from 'express';
-import type { RequestHandler } from 'express';
 import { isWrapped, wrap } from '../shimmer';
 import type OpenAPM from '../OpenAPM';
 import { Server } from 'http';
 
 export const instrumentExpress = (
   express: typeof Express,
-  redMiddleware: RequestHandler,
+  redMiddleware: Express.RequestHandler,
   openapm: OpenAPM
 ) => {
   let redMiddlewareAdded = false;
