@@ -1,15 +1,18 @@
-const express = require('express');
-const http = require('http');
-const next = require('next');
-const { parse } = require('url');
 const { OpenAPM } = require('../../');
-
 const openapm = new OpenAPM({
   metricsServerPort: 9098,
   additionalLabels: ['slug']
 });
+const dir = './tests/nextjs';
 
-openapm.instrument('nextjs');
+openapm.instrument('nextjs', {
+  dir
+});
+
+const express = require('express');
+const http = require('http');
+const next = require('next');
+const { parse } = require('url');
 
 async function main() {
   const app = express();
@@ -20,7 +23,6 @@ async function main() {
   const port = 3002;
 
   // 'dir' is a string that specifies the directory where the app is located
-  const dir = './tests/nextjs';
   const nextApp = next({
     dev,
     dir,

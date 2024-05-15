@@ -21,7 +21,7 @@ export const instrumentNextjs = (
   openapm: OpenAPM
 ) => {
   const { loadManifest, getRouteRegex, getRouteMatcher } = nextUtities;
-  const DOT_NEXT = join(nextUtities.dir ?? process.cwd(), '.next');
+  const DOT_NEXT = join(process.cwd(), nextUtities.dir ?? '', '.next');
 
   const PAGES_MANIFEST = 'server/pages-manifest.json';
   const APP_PATHS_MANIFEST = 'server/app-paths-manifest.json';

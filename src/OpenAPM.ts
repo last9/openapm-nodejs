@@ -450,13 +450,13 @@ export class OpenAPM extends LevitateEvents {
           {
             loadManifest: require(path.resolve(
               'node_modules/next/dist/server/load-manifest.js'
-            )),
+            )).loadManifest,
             getRouteRegex: require(path.resolve(
               'node_modules/next/dist/shared/lib/router/utils/route-regex.js'
-            )),
+            )).getRouteRegex,
             getRouteMatcher: require(path.resolve(
               'node_modules/next/dist/shared/lib/router/utils/route-matcher.js'
-            )),
+            )).getRouteMatcher,
             dir: options?.dir
           },
           {
