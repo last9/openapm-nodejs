@@ -3,6 +3,8 @@ import type * as Express from 'express';
 import { isWrapped, wrap } from '../shimmer';
 import type OpenAPM from '../OpenAPM';
 import { Server } from 'http';
+import { AsyncLocalStorage } from 'async_hooks';
+import type { HTTPRequestStore } from '../async-local-storage.http';
 
 export const instrumentExpress = (
   express: typeof Express,

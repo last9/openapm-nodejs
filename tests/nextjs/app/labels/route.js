@@ -1,9 +1,12 @@
-import { asyncLocalStorage } from '../../../../src/async-local-storage.http';
+import { requestAsyncStorage } from 'next/dist/client/components/request-async-storage.external';
 import { NextResponse } from 'next/server';
 
 export async function GET(request) {
-  const storage = asyncLocalStorage.getStore();
-  console.log('storage', storage);
+  const store = requestAsyncStorage?.getStore();
+  store['labels'] = {
+    test: 'test'
+  };
+  console.log('store:', store);
 
   return NextResponse.json({
     status: 200,

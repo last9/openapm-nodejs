@@ -418,12 +418,7 @@ export class OpenAPM extends LevitateEvents {
     return metrics.trim();
   };
 
-  public instrument(moduleName: 'nextjs', options?: { dir?: string }): boolean;
-  public instrument(moduleName: SupportedModules): boolean;
-  public instrument(
-    moduleName: SupportedModules,
-    options?: { dir?: string }
-  ): boolean {
+  public instrument(moduleName: SupportedModules): boolean {
     if (!this.enabled) {
       return false;
     }
@@ -448,16 +443,12 @@ export class OpenAPM extends LevitateEvents {
         instrumentNextjs(
           nextServer.default,
           {
-            loadManifest: require(path.resolve(
-              'node_modules/next/dist/server/load-manifest.js'
-            )).loadManifest,
-            getRouteRegex: require(path.resolve(
-              'node_modules/next/dist/shared/lib/router/utils/route-regex.js'
-            )).getRouteRegex,
-            getRouteMatcher: require(path.resolve(
-              'node_modules/next/dist/shared/lib/router/utils/route-matcher.js'
-            )).getRouteMatcher,
-            dir: options?.dir
+            getRequestMeta: require(path.resolve(
+              'node_modules/next/dist/server/request-meta.js'
+            )).getRequestMeta,
+            requestAsyncStorage: require(path.resolve(
+              'node_modules/next/dist/client/components/request-async-storage.external.js'
+            )).requestAsyncStorage
           },
           {
             counter: this.requestsCounter,
