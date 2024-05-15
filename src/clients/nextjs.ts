@@ -4,7 +4,10 @@ import chokidar from 'chokidar';
 import { wrap } from '../shimmer';
 import { join } from 'path';
 import OpenAPM from '../OpenAPM';
-import { getHTTPRequestStore } from '../async-local-storage.http';
+import {
+  asyncLocalStorage,
+  getHTTPRequestStore
+} from '../async-local-storage.http';
 
 export const instrumentNextjs = (
   nextServer: typeof NextNodeServer,
@@ -12,12 +15,13 @@ export const instrumentNextjs = (
     loadManifest: any;
     getRouteRegex: any;
     getRouteMatcher: any;
+    dir?: string;
   },
   { counter, histogram }: { counter?: Counter; histogram?: Histogram },
   openapm: OpenAPM
 ) => {
   const { loadManifest, getRouteRegex, getRouteMatcher } = nextUtities;
-  const DOT_NEXT = join(process.cwd(), '.next');
+  const DOT_NEXT = join(nextUtities.dir ?? process.cwd(), '.next');
 
   const PAGES_MANIFEST = 'server/pages-manifest.json';
   const APP_PATHS_MANIFEST = 'server/app-paths-manifest.json';
@@ -101,38 +105,45 @@ export const instrumentNextjs = (
     return async function (
       ...args: Parameters<ReturnType<NextNodeServer['getRequestHandler']>>
     ) {
-      const [req, res] = args;
-      const start = process.hrtime.bigint();
-
-      const result = handler(...args);
-      if (result instanceof Promise) {
-        await result;
-      }
-      const end = process.hrtime.bigint();
-      const duration = Number(end - start) / 1e6;
-      const parsedPath = ctx.getParameterizedRoute(
-        parsedPathname(req.url ?? '/')
-      );
-
-      const store = getHTTPRequestStore();
-      ctx.counter?.inc({
-        path: parsedPath !== '' ? parsedPath : '/',
-        method: req.method ?? 'GET',
-        status: res.statusCode?.toString() ?? '500',
-        ...(store?.labels ?? {})
-      });
-
-      ctx.histogram?.observe(
+      return asyncLocalStorage.run(
         {
-          path: parsedPath !== '' ? parsedPath : '/',
-          method: req.method ?? 'GET',
-          status: res.statusCode?.toString() ?? '500',
-          ...(store?.labels ?? {})
+          labels: {}
         },
-        duration
-      );
+        async () => {
+          const [req, res] = args;
+          const start = process.hrtime.bigint();
 
-      return result;
+          const result = handler(...args);
+          if (result instanceof Promise) {
+            await result;
+          }
+          const end = process.hrtime.bigint();
+          const duration = Number(end - start) / 1e6;
+          const parsedPath = ctx.getParameterizedRoute(
+            parsedPathname(req.url ?? '/')
+          );
+
+          const store = getHTTPRequestStore();
+          ctx.counter?.inc({
+            path: parsedPath !== '' ? parsedPath : '/',
+            method: req.method ?? 'GET',
+            status: res.statusCode?.toString() ?? '500',
+            ...(store?.labels ?? {})
+          });
+
+          ctx.histogram?.observe(
+            {
+              path: parsedPath !== '' ? parsedPath : '/',
+              method: req.method ?? 'GET',
+              status: res.statusCode?.toString() ?? '500',
+              ...(store?.labels ?? {})
+            },
+            duration
+          );
+
+          return result;
+        }
+      );
     };
   };
 

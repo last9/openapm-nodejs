@@ -1,10 +1,10 @@
-import { createAsyncLocalStorage } from './async-local-storage';
+import { AsyncLocalStorage } from 'async_hooks';
 
 export type HTTPRequestStore = {
   labels: Record<string, string>;
 };
 
-const asyncLocalStorage = createAsyncLocalStorage<HTTPRequestStore>();
+export const asyncLocalStorage = new AsyncLocalStorage<HTTPRequestStore>();
 
 export const getHTTPRequestStore = () => {
   return asyncLocalStorage.getStore();

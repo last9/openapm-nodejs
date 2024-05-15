@@ -418,7 +418,12 @@ export class OpenAPM extends LevitateEvents {
     return metrics.trim();
   };
 
-  public instrument(moduleName: SupportedModules): boolean {
+  public instrument(moduleName: 'nextjs', options?: { dir?: string }): boolean;
+  public instrument(moduleName: SupportedModules): boolean;
+  public instrument(
+    moduleName: SupportedModules,
+    options?: { dir?: string }
+  ): boolean {
     if (!this.enabled) {
       return false;
     }
@@ -451,7 +456,8 @@ export class OpenAPM extends LevitateEvents {
             )),
             getRouteMatcher: require(path.resolve(
               'node_modules/next/dist/shared/lib/router/utils/route-matcher.js'
-            ))
+            )),
+            dir: options?.dir
           },
           {
             counter: this.requestsCounter,

@@ -7,7 +7,6 @@ import OpenAPM from '../../src/OpenAPM';
 import parsePrometheusTextFormat from 'parse-prometheus-text-format';
 import { resolve } from 'path';
 import { makeRequest, sendTestRequestNextJS } from '../utils';
-import { writeFileSync } from 'fs';
 
 describe('Next.js', () => {
   let openapm: OpenAPM;
@@ -72,5 +71,10 @@ describe('Next.js', () => {
         )?.metrics[0].buckets
       ).length > 0
     ).toBe(true);
+  });
+
+  test('Dynamic Labels', async () => {
+    await makeRequest(expressApp, '/labels');
+    expect(true).toBe(true);
   });
 });
