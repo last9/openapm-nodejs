@@ -3,7 +3,6 @@ import prom, { Counter, Histogram } from 'prom-client';
 import { wrap } from '../shimmer';
 import OpenAPM from '../OpenAPM';
 import type { AsyncLocalStorage } from 'async_hooks';
-import { NEXT_REQUEST_META } from 'next/dist/server/request-meta';
 
 export const instrumentNextjs = (
   nextServer: typeof NextNodeServer,
