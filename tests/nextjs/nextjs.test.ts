@@ -6,7 +6,8 @@ import { describe, afterAll, beforeAll, test, expect } from 'vitest';
 import OpenAPM from '../../src/OpenAPM';
 import parsePrometheusTextFormat from 'parse-prometheus-text-format';
 import { resolve } from 'path';
-import { makeRequest, sendTestRequestNextJS } from '../utils';
+import { makeRequest } from '../utils';
+import { chromium } from 'playwright';
 
 describe('Next.js', () => {
   let openapm: OpenAPM;
@@ -35,16 +36,14 @@ describe('Next.js', () => {
       res.end(metrics);
     });
 
-    expressApp.all('*', (req, res) => {
-      return app.getRequestHandler()(req, res);
+    const handler = app.getRequestHandler();
+
+    expressApp.all('*', async (req, res) => {
+      return await handler(req, res);
     });
 
     await app.prepare();
     server = expressApp.listen(3003);
-
-    // await sendTestRequestNextJS(expressApp, 3);
-    // const res = await request(expressApp).get('/metrics');
-    // parsedData = parsePrometheusTextFormat(res.text);
   });
 
   afterAll(async () => {
@@ -88,7 +87,6 @@ describe('Next.js', () => {
 
   test('Page router: Page Route', async () => {
     const res = await makeRequest(expressApp, '/about');
-    console.log(res.text);
     expect(res.statusCode).toBe(200);
   });
 
@@ -186,10 +184,29 @@ describe('Next.js', () => {
   });
 
   test('Static files should not be captured in metrics', async () => {
+    const res = await makeRequest(expressApp, '/about');
+    const browser = await chromium.launch();
+    const page = await browser.newPage();
+
+    page.setContent(res.text);
+    console.log(res.text);
+
+    const elements = await page.$$('script');
+
+    for (let el of elements) {
+      const src = await el.getAttribute('src');
+      if (src) {
+        await makeRequest(expressApp, src);
+      }
+    }
+    parsedData = parsePrometheusTextFormat(
+      (await makeRequest(expressApp, '/metrics')).text
+    );
+
     expect(
       parsedData
         ?.find((m) => m.name === 'http_requests_total')
-        ?.metrics.find((m) => m.labels.path.endsWith('.css'))
+        ?.metrics.find((m) => m.labels.path.endsWith('.js'))
     ).toBeUndefined();
   });
 });
