@@ -52,22 +52,28 @@ export const instrumentNextjs = (
       ) as RequestMeta['match'];
       const parsedPath = requestMetaMatch?.definition.pathname;
 
-      counter?.inc({
-        path: parsedPath !== '' ? parsedPath : '/',
-        method: req.method ?? 'GET',
-        status: res.statusCode?.toString() ?? '500'
-        // ...(store?.labels ?? {}) -> // TODO: Implement dynamic labels
-      });
-
-      histogram?.observe(
-        {
+      if (
+        parsedPath &&
+        !parsedPath.startsWith('/_next/static/') &&
+        !parsedPath.startsWith('/favicon.ico')
+      ) {
+        counter?.inc({
           path: parsedPath !== '' ? parsedPath : '/',
           method: req.method ?? 'GET',
           status: res.statusCode?.toString() ?? '500'
           // ...(store?.labels ?? {}) -> // TODO: Implement dynamic labels
-        },
-        duration
-      );
+        });
+
+        histogram?.observe(
+          {
+            path: parsedPath !== '' ? parsedPath : '/',
+            method: req.method ?? 'GET',
+            status: res.statusCode?.toString() ?? '500'
+            // ...(store?.labels ?? {}) -> // TODO: Implement dynamic labels
+          },
+          duration
+        );
+      }
 
       return result;
     };
