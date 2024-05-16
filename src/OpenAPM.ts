@@ -445,10 +445,7 @@ export class OpenAPM extends LevitateEvents {
           {
             getRequestMeta: require(path.resolve(
               'node_modules/next/dist/server/request-meta.js'
-            )).getRequestMeta,
-            requestAsyncStorage: require(path.resolve(
-              'node_modules/next/dist/client/components/request-async-storage.external.js'
-            )).requestAsyncStorage
+            )).getRequestMeta
           },
           {
             counter: this.requestsCounter,

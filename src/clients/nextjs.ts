@@ -1,80 +1,118 @@
 import type NextNodeServer from 'next/dist/server/next-server';
+import type {
+  NextIncomingMessage,
+  RequestMeta
+} from 'next/dist/server/request-meta';
+
 import prom, { Counter, Histogram } from 'prom-client';
 import { wrap } from '../shimmer';
 import OpenAPM from '../OpenAPM';
-import type { AsyncLocalStorage } from 'async_hooks';
+
+// const newHandler = async (
+//   ...args: Parameters<ReturnType<NextNodeServer['getRequestHandler']>>
+// ) => {
+//   const [req, res] = args;
+//   const start = process.hrtime.bigint();
+//   const store = requestAsyncStorage?.getStore();
+
+//   const result = handler(...args);
+//   if (result instanceof Promise) {
+//     await result;
+//   }
+//   const end = process.hrtime.bigint();
+//   const duration = Number(end - start) / 1e6;
+//   // @ts-ignore
+//   const requestMetaMatch = getRequestMeta(req, 'match');
+//   const parsedPath = requestMetaMatch?.definition.pathname;
+
+//   ctx.counter?.inc({
+//     path: parsedPath !== '' ? parsedPath : '/',
+//     method: req.method ?? 'GET',
+//     status: res.statusCode?.toString() ?? '500',
+//     ...(store?.labels ?? {})
+//   });
+
+//   ctx.histogram?.observe(
+//     {
+//       path: parsedPath !== '' ? parsedPath : '/',
+//       method: req.method ?? 'GET',
+//       status: res.statusCode?.toString() ?? '500',
+//       ...(store?.labels ?? {})
+//     },
+//     duration
+//   );
+
+//   return result;
+// };
+
+interface NextUtilities {
+  getRequestMeta: <K extends keyof RequestMeta>(
+    req: NextIncomingMessage,
+    key?: K
+  ) => RequestMeta[K] | RequestMeta;
+}
 
 export const instrumentNextjs = (
   nextServer: typeof NextNodeServer,
-  nextUtities: {
-    getRequestMeta: any;
-    requestAsyncStorage?: AsyncLocalStorage<{
-      labels: Record<string, string | number | boolean>;
-    }>;
-  },
+  nextUtilities: NextUtilities,
   { counter, histogram }: { counter?: Counter; histogram?: Histogram },
   openapm: OpenAPM
 ) => {
-  const { requestAsyncStorage, getRequestMeta } = nextUtities;
+  const { getRequestMeta } = nextUtilities;
+
+  if (typeof counter === 'undefined') {
+    counter = new prom.Counter(openapm.requestsCounterConfig);
+  }
+
+  if (typeof histogram === 'undefined') {
+    histogram = new prom.Histogram(openapm.requestDurationHistogramConfig);
+  }
 
   const wrappedHandler = (
-    handler: ReturnType<NextNodeServer['getRequestHandler']>,
-    ctx: {
-      counter?: Counter;
-      histogram?: Histogram;
-    }
+    handler: ReturnType<NextNodeServer['getRequestHandler']>
   ) => {
-    return async function (
-      ...args: Parameters<ReturnType<NextNodeServer['getRequestHandler']>>
-    ) {
-      const [req, res] = args;
-      const start = process.hrtime.bigint();
+    return new Proxy(handler, {
+      async apply(
+        target,
+        thisArg,
+        args: Parameters<ReturnType<NextNodeServer['getRequestHandler']>>
+      ) {
+        const [req, res] = args;
+        const start = process.hrtime.bigint();
 
-      const result = handler(...args);
-      if (result instanceof Promise) {
-        await result;
-      }
-      const end = process.hrtime.bigint();
-      const duration = Number(end - start) / 1e6;
-      // @ts-ignore
-      const requestMetaMatch = getRequestMeta(req, 'match');
-      const parsedPath = requestMetaMatch?.definition.pathname;
+        const result = target.apply(thisArg, args);
+        if (result instanceof Promise) {
+          await result;
+        }
+        const end = process.hrtime.bigint();
+        const duration = Number(end - start) / 1e6;
+        const requestMetaMatch = getRequestMeta(
+          req,
+          'match'
+        ) as RequestMeta['match'];
+        const parsedPath = requestMetaMatch?.definition.pathname;
 
-      const store = requestAsyncStorage?.getStore();
-
-      ctx.counter?.inc({
-        path: parsedPath !== '' ? parsedPath : '/',
-        method: req.method ?? 'GET',
-        status: res.statusCode?.toString() ?? '500',
-        ...(store?.labels ?? {})
-      });
-
-      ctx.histogram?.observe(
-        {
+        counter?.inc({
           path: parsedPath !== '' ? parsedPath : '/',
           method: req.method ?? 'GET',
-          status: res.statusCode?.toString() ?? '500',
-          ...(store?.labels ?? {})
-        },
-        duration
-      );
+          status: res.statusCode?.toString() ?? '500'
+          // ...(store?.labels ?? {}) -> // TODO: Implement dynamic labels
+        });
 
-      return result;
-    };
+        histogram?.observe(
+          {
+            path: parsedPath !== '' ? parsedPath : '/',
+            method: req.method ?? 'GET',
+            status: res.statusCode?.toString() ?? '500'
+            // ...(store?.labels ?? {}) -> // TODO: Implement dynamic labels
+          },
+          duration
+        );
+
+        return result;
+      }
+    });
   };
-
-  const ctx = {
-    counter,
-    histogram
-  };
-
-  if (typeof ctx.counter === 'undefined') {
-    ctx.counter = new prom.Counter(openapm.requestsCounterConfig);
-  }
-
-  if (typeof ctx.histogram === 'undefined') {
-    ctx.histogram = new prom.Histogram(openapm.requestDurationHistogramConfig);
-  }
 
   wrap(nextServer.prototype, 'getRequestHandler', function (original) {
     return function (
@@ -84,10 +122,7 @@ export const instrumentNextjs = (
       const handler = original.apply(this, args) as ReturnType<
         NextNodeServer['getRequestHandler']
       >;
-      return wrappedHandler(handler, {
-        counter,
-        histogram
-      });
+      return wrappedHandler(handler);
     };
   });
 };

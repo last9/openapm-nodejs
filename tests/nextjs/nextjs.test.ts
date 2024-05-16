@@ -11,7 +11,7 @@ import { makeRequest, sendTestRequestNextJS } from '../utils';
 describe('Next.js', () => {
   let openapm: OpenAPM;
   let server: Server;
-  let parsedData: Array<Record<string, any>> = [];
+  let parsedData: Array<Record<string, any>>;
   let expressApp: express.Express;
 
   beforeAll(async () => {
@@ -42,9 +42,9 @@ describe('Next.js', () => {
     await app.prepare();
     server = expressApp.listen(3003);
 
-    await sendTestRequestNextJS(expressApp, 3);
-    const res = await request(expressApp).get('/metrics');
-    parsedData = parsePrometheusTextFormat(res.text);
+    // await sendTestRequestNextJS(expressApp, 3);
+    // const res = await request(expressApp).get('/metrics');
+    // parsedData = parsePrometheusTextFormat(res.text);
   });
 
   afterAll(async () => {
@@ -52,7 +52,71 @@ describe('Next.js', () => {
     server?.close();
   });
 
+  test('App router: Page Route', async () => {
+    const res = await makeRequest(expressApp, '/');
+    expect(res.statusCode).toBe(200);
+  });
+
+  test('App router: Route does not exists', async () => {
+    const res = await makeRequest(expressApp, '/non-existent-route');
+    expect(res.statusCode).toBe(404);
+  });
+
+  test('App router: API Route (GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD)', async () => {
+    const route = '/app-apis';
+    let res = await request(expressApp).get(route);
+    expect(res.statusCode).toBe(200);
+
+    res = await request(expressApp).post(route);
+    expect(res.statusCode).toBe(200);
+
+    res = await request(expressApp).put(route);
+    expect(res.statusCode).toBe(200);
+
+    res = await request(expressApp).delete(route);
+    expect(res.statusCode).toBe(200);
+
+    res = await request(expressApp).patch(route);
+    expect(res.statusCode).toBe(200);
+
+    res = await request(expressApp).head(route);
+    expect(res.statusCode).toBe(200);
+
+    res = await request(expressApp).options(route);
+    expect(res.statusCode).toBe(200);
+  });
+
+  test('Page router: Page Route', async () => {
+    const res = await makeRequest(expressApp, '/about');
+    console.log(res.text);
+    expect(res.statusCode).toBe(200);
+  });
+
+  test('Page router: API Route (GET, POST, PUT, DELETE, PATCH, HEAD)', async () => {
+    const route = '/api/hello';
+    let res = await request(expressApp).get(route);
+    expect(res.statusCode).toBe(200);
+
+    res = await request(expressApp).post(route);
+    expect(res.statusCode).toBe(200);
+
+    res = await request(expressApp).put(route);
+    expect(res.statusCode).toBe(200);
+
+    res = await request(expressApp).delete(route);
+    expect(res.statusCode).toBe(200);
+
+    res = await request(expressApp).head(route);
+    expect(res.statusCode).toBe(200);
+
+    res = await request(expressApp).patch(route);
+    expect(res.statusCode).toBe(200);
+  });
+
   test('Metrics are captured', async () => {
+    parsedData = parsePrometheusTextFormat(
+      (await makeRequest(expressApp, '/metrics')).text
+    );
     expect(parsedData).toBeDefined();
   });
 
@@ -73,8 +137,76 @@ describe('Next.js', () => {
     ).toBe(true);
   });
 
-  test('Dynamic Labels', async () => {
-    await makeRequest(expressApp, '/labels');
-    expect(true).toBe(true);
+  test('App router route paths masked', async () => {
+    await makeRequest(expressApp, '/app-apis/123');
+    parsedData = parsePrometheusTextFormat(
+      (await makeRequest(expressApp, '/metrics')).text
+    );
+    expect(
+      parsedData
+        ?.find((m) => m.name === 'http_requests_total')
+        ?.metrics.find((m) => m.labels.path === '/app-apis/[id]')
+    ).toBeDefined();
+  });
+
+  test('App router page paths masked', async () => {
+    await makeRequest(expressApp, '/users/123');
+    parsedData = parsePrometheusTextFormat(
+      (await makeRequest(expressApp, '/metrics')).text
+    );
+    expect(
+      parsedData
+        ?.find((m) => m.name === 'http_requests_total')
+        ?.metrics.find((m) => m.labels.path === '/users/[id]')
+    ).toBeDefined();
+  });
+
+  test('Page router page paths masked', async () => {
+    await makeRequest(expressApp, '/blog/123');
+    parsedData = parsePrometheusTextFormat(
+      (await makeRequest(expressApp, '/metrics')).text
+    );
+    expect(
+      parsedData
+        ?.find((m) => m.name === 'http_requests_total')
+        ?.metrics.find((m) => m.labels.path === '/blog/[id]')
+    ).toBeDefined();
+  });
+
+  test('Page router route paths masked', async () => {
+    await makeRequest(expressApp, '/api/auth/login');
+    parsedData = parsePrometheusTextFormat(
+      (await makeRequest(expressApp, '/metrics')).text
+    );
+    expect(
+      parsedData
+        ?.find((m) => m.name === 'http_requests_total')
+        ?.metrics.find((m) => m.labels.path === '/api/auth/[...nextAuth]')
+    ).toBeDefined();
+  });
+
+  test('Static files should not be captured in metrics', async () => {
+    expect(
+      parsedData
+        ?.find((m) => m.name === 'http_requests_total')
+        ?.metrics.find((m) => m.labels.path.endsWith('.css'))
+    ).toBeUndefined();
   });
 });
+
+/**
+ * Test Cases:
+ * - [x] App router correctly routes requests page routes
+ * - [x] Next gives 404 for non-existent routes
+ * - [x] App router correctly routes requests route routes (GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD)
+ * - [x] Page router correctly routes requests to the react components
+ * - [x] Page router correctly routes requests to the API routes (GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD)
+ * - [x] Metrics are captured
+ * - [x] Captures Counter Metrics
+ * - [x] Captures Histogram Metrics
+ * - [x] App router route paths getting masked correctly
+ * - [x] App router page paths getting masked correctly
+ * - [x] Page router page paths getting masked correctly
+ * - [x] Page router route paths getting masked correctly
+ * - [ ] Static files should not be captured in metrics
+ */
