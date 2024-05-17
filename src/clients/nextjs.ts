@@ -1,106 +1,42 @@
 import type NextNodeServer from 'next/dist/server/next-server';
+import type {
+  NextIncomingMessage,
+  RequestMeta
+} from 'next/dist/server/request-meta';
+
 import prom, { Counter, Histogram } from 'prom-client';
-import chokidar from 'chokidar';
 import { wrap } from '../shimmer';
-import { join } from 'path';
 import OpenAPM from '../OpenAPM';
-import { getHTTPRequestStore } from '../async-local-storage.http';
+
+interface NextUtilities {
+  getRequestMeta: <K extends keyof RequestMeta>(
+    req: NextIncomingMessage,
+    key?: K
+  ) => RequestMeta[K] | RequestMeta;
+}
 
 export const instrumentNextjs = (
   nextServer: typeof NextNodeServer,
-  nextUtities: {
-    loadManifest: any;
-    getRouteRegex: any;
-    getRouteMatcher: any;
-  },
+  nextUtilities: NextUtilities,
   { counter, histogram }: { counter?: Counter; histogram?: Histogram },
   openapm: OpenAPM
 ) => {
-  const { loadManifest, getRouteRegex, getRouteMatcher } = nextUtities;
-  const DOT_NEXT = join(process.cwd(), '.next');
+  const { getRequestMeta } = nextUtilities;
 
-  const PAGES_MANIFEST = 'server/pages-manifest.json';
-  const APP_PATHS_MANIFEST = 'server/app-paths-manifest.json';
+  if (typeof counter === 'undefined') {
+    counter = new prom.Counter(openapm.requestsCounterConfig);
+  }
 
-  const PATHS_CACHE = {
-    value: new Set<{
-      route: string;
-      re: RegExp;
-      matcher: (pathname: string | null | undefined) =>
-        | false
-        | {
-            [param: string]: any;
-          };
-    }>(),
-    setValue: async () => {
-      try {
-        const pagesManifest = (await loadManifest(
-          join(DOT_NEXT, PAGES_MANIFEST),
-          false
-        )) as Record<string, string>;
-        const appPathsManifest = (await loadManifest(
-          join(DOT_NEXT, APP_PATHS_MANIFEST),
-          false
-        )) as Record<string, string>;
-
-        const appPathsKeys = Object.keys(appPathsManifest);
-        for (let i = 0; i < appPathsKeys.length; i++) {
-          const key = appPathsKeys[i];
-          const path = key.replace(
-            /\/(page|not-found|layout|loading|head|route)$/,
-            ''
-          );
-          const reg = getRouteRegex(path);
-          const matcher = getRouteMatcher(reg);
-
-          PATHS_CACHE.value.add({
-            route: path,
-            matcher,
-            re: reg.re
-          });
-        }
-
-        const keys = Object.keys(pagesManifest);
-        for (let i = 0; i < keys.length; i++) {
-          const key = keys[i];
-          const reg = getRouteRegex(key);
-          const matcher = getRouteMatcher(reg);
-
-          PATHS_CACHE.value.add({
-            route: key,
-            matcher,
-            re: reg.re
-          });
-        }
-      } catch (e) {}
-    },
-    keepUpdated: () => {
-      const watcher = chokidar.watch(DOT_NEXT, {
-        ignoreInitial: true
-      });
-
-      watcher.on('all', () => {
-        PATHS_CACHE.setValue();
-      });
-      return watcher;
-    }
-  };
-
-  const parsedPathname = (url: string) => {
-    return url.split('?')[0];
-  };
+  if (typeof histogram === 'undefined') {
+    histogram = new prom.Histogram(openapm.requestDurationHistogramConfig);
+  }
 
   const wrappedHandler = (
-    handler: ReturnType<NextNodeServer['getRequestHandler']>,
-    ctx: {
-      getParameterizedRoute: (route: string) => string;
-      counter?: Counter;
-      histogram?: Histogram;
-    }
+    handler: ReturnType<NextNodeServer['getRequestHandler']>
   ) => {
-    return async function (
+    return async (
       ...args: Parameters<ReturnType<NextNodeServer['getRequestHandler']>>
-    ) {
+    ) => {
       const [req, res] = args;
       const start = process.hrtime.bigint();
 
@@ -110,57 +46,37 @@ export const instrumentNextjs = (
       }
       const end = process.hrtime.bigint();
       const duration = Number(end - start) / 1e6;
-      const parsedPath = ctx.getParameterizedRoute(
-        parsedPathname(req.url ?? '/')
-      );
+      const requestMetaMatch = getRequestMeta(
+        req,
+        'match'
+      ) as RequestMeta['match'];
+      const parsedPath = requestMetaMatch?.definition.pathname;
 
-      const store = getHTTPRequestStore();
-      ctx.counter?.inc({
-        path: parsedPath !== '' ? parsedPath : '/',
-        method: req.method ?? 'GET',
-        status: res.statusCode?.toString() ?? '500',
-        ...(store?.labels ?? {})
-      });
-
-      ctx.histogram?.observe(
-        {
+      if (
+        parsedPath &&
+        !parsedPath.startsWith('/_next/static/') &&
+        !parsedPath.startsWith('/favicon.ico')
+      ) {
+        counter?.inc({
           path: parsedPath !== '' ? parsedPath : '/',
           method: req.method ?? 'GET',
-          status: res.statusCode?.toString() ?? '500',
-          ...(store?.labels ?? {})
-        },
-        duration
-      );
+          status: res.statusCode?.toString() ?? '500'
+          // ...(store?.labels ?? {}) -> // TODO: Implement dynamic labels
+        });
+
+        histogram?.observe(
+          {
+            path: parsedPath !== '' ? parsedPath : '/',
+            method: req.method ?? 'GET',
+            status: res.statusCode?.toString() ?? '500'
+            // ...(store?.labels ?? {}) -> // TODO: Implement dynamic labels
+          },
+          duration
+        );
+      }
 
       return result;
     };
-  };
-
-  const ctx = {
-    counter,
-    histogram
-  };
-
-  if (typeof ctx.counter === 'undefined') {
-    ctx.counter = new prom.Counter(openapm.requestsCounterConfig);
-  }
-
-  if (typeof ctx.histogram === 'undefined') {
-    ctx.histogram = new prom.Histogram(openapm.requestDurationHistogramConfig);
-  }
-
-  PATHS_CACHE.setValue();
-  PATHS_CACHE.keepUpdated();
-  const getParameterizedRoute = (route: string) => {
-    const values = Array.from(PATHS_CACHE.value);
-    for (let i = 0; i < values.length; i++) {
-      const page = values[i];
-      if (page.matcher(route) !== false) {
-        return page.route;
-      }
-    }
-
-    return route;
   };
 
   wrap(nextServer.prototype, 'getRequestHandler', function (original) {
@@ -171,11 +87,7 @@ export const instrumentNextjs = (
       const handler = original.apply(this, args) as ReturnType<
         NextNodeServer['getRequestHandler']
       >;
-      return wrappedHandler(handler, {
-        getParameterizedRoute,
-        counter,
-        histogram
-      });
+      return wrappedHandler(handler);
     };
   });
 };

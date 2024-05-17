@@ -43,6 +43,9 @@ jobs:
       - name: 📦 Install dependencies
         run: npm install --frozen-lockfile
 
+      - name: 📦 Install Playwright Deps
+        run: npx playwright install --with-deps
+
       - name: 🧪 Test
         env:
           DB_HOST: localhost
