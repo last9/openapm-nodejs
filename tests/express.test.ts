@@ -50,6 +50,7 @@ describe('REDMiddleware', () => {
   });
 
   test('Captures Custom Counter Metrics - App', async () => {
+    console.log(parsedData);
     expect(
       parseInt(
         parsedData?.find((m) => m.name === 'custom_counter')?.metrics[0]

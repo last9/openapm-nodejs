@@ -15,9 +15,11 @@ export const addRoutes = (app: Express) => {
   router.get('/:id', (req, res) => {
     const { id } = req.params;
     ``;
+    // counter.inc();
     res.status(200).send(id);
   });
   app.use('/api/router/', router);
+
   app.get('/api/:id', (req, res) => {
     const { id } = req.params;
     counter.inc();
