@@ -10,6 +10,7 @@ import { writeFileSync } from 'fs';
 
 describe('REDMiddleware', () => {
   const NUMBER_OF_REQUESTS = 300;
+  const MEANING_OF_LIFE = 42;
   let openapm: OpenAPM;
   let app: Express;
   let parsedData: Array<Record<string, any>> = [];
@@ -49,7 +50,7 @@ describe('REDMiddleware', () => {
     ).toBe(NUMBER_OF_REQUESTS);
   });
 
-  test('Captures Custom Counter Metrics - App', async () => {
+  test('Captures Custom Counter Metric - App', async () => {
     expect(
       parseInt(
         parsedData?.find((m) => m.name === 'custom_counter_total')?.metrics[0]
@@ -70,6 +71,29 @@ describe('REDMiddleware', () => {
     // }
 
     expect(labels.service).toBe('express');
+    expect(labels.environment).toBe('production');
+    expect(labels.program).toBe('@last9/openapm');
+  });
+
+  test('Captures Custom Gauge Metric - App', async () => {
+    expect(
+      parseInt(
+        parsedData?.find((m) => m.name === 'custom_gauge')?.metrics[0].value ??
+          '0'
+      )
+    ).toBe(MEANING_OF_LIFE);
+
+    const labels = parsedData?.find((m) => m.name === 'custom_gauge')
+      ?.metrics[0].labels;
+
+    // {
+    //     environment: 'production',
+    //     program: '@last9/openapm',
+    //     version: '0.9.3-alpha',
+    //     host: 'Adityas-MacBook-Pro-2.local',
+    //     ip: '192.168.1.110'
+    // }
+
     expect(labels.environment).toBe('production');
     expect(labels.program).toBe('@last9/openapm');
   });
