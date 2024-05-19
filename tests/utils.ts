@@ -6,23 +6,40 @@ import { metricClient } from '../src/OpenAPM';
 
 export const addRoutes = (app: Express) => {
   const router = express.Router();
+
   const client = metricClient();
+
+  const gauge = new client.Gauge({
+    name: 'custom_gauge',
+    help: 'custom gauge'
+  });
+
   const counter = new client.Counter({
-    name: 'custom_counter',
-    help: 'no. of times operation is called'
+    name: 'custom_counter_total',
+    help: 'custom counter',
+    labelNames: ['service']
+  });
+
+  // dummy counter to make sure the https://github.com/yunyu/parse-prometheus-text-format
+  // library parses the above counter into array from the text format.
+  // TODO: We should get rid of https://github.com/yunyu/parse-prometheus-text-format
+  const dummy = new client.Counter({
+    name: 'dummy_counter_total',
+    help: 'dummy counter'
   });
 
   router.get('/:id', (req, res) => {
     const { id } = req.params;
     ``;
-    // counter.inc();
+    gauge.set(42);
     res.status(200).send(id);
   });
+
   app.use('/api/router/', router);
 
   app.get('/api/:id', (req, res) => {
     const { id } = req.params;
-    counter.inc();
+    counter.inc({ service: 'express' });
     res.status(200).send(id);
   });
 

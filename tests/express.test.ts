@@ -50,13 +50,28 @@ describe('REDMiddleware', () => {
   });
 
   test('Captures Custom Counter Metrics - App', async () => {
-    console.log(parsedData);
     expect(
       parseInt(
-        parsedData?.find((m) => m.name === 'custom_counter')?.metrics[0]
+        parsedData?.find((m) => m.name === 'custom_counter_total')?.metrics[0]
           .value ?? '0'
       )
     ).toBe(NUMBER_OF_REQUESTS);
+
+    const labels = parsedData?.find((m) => m.name === 'custom_counter_total')
+      ?.metrics[0].labels;
+
+    // {
+    //     service: 'express',
+    //     environment: 'production',
+    //     program: '@last9/openapm',
+    //     version: '0.9.3-alpha',
+    //     host: 'Adityas-MacBook-Pro-2.local',
+    //     ip: '192.168.1.110'
+    // }
+
+    expect(labels.service).toBe('express');
+    expect(labels.environment).toBe('production');
+    expect(labels.program).toBe('@last9/openapm');
   });
 
   test('Captures Counter Metrics - Router', async () => {
