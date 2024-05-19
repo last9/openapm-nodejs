@@ -2,12 +2,12 @@ import request from 'supertest';
 import express from 'express';
 import type { Express } from 'express';
 import { setOpenAPMLabels } from '../src/async-local-storage.http';
-import { metricClient } from '../src/OpenAPM';
+import { getMetricClient } from '../src/OpenAPM';
 
 export const addRoutes = (app: Express) => {
   const router = express.Router();
 
-  const client = metricClient();
+  const client = getMetricClient();
 
   const gauge = new client.Gauge({
     name: 'custom_gauge',

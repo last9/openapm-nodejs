@@ -436,16 +436,16 @@ export class OpenAPM extends LevitateEvents {
         instrumentNestFactory(NestFactory, this._REDMiddleware);
       }
       if (moduleName === 'nextjs') {
-        const nextServer = require(
-          path.resolve('node_modules/next/dist/server/next-server.js')
-        );
+        const nextServer = require(path.resolve(
+          'node_modules/next/dist/server/next-server.js'
+        ));
 
         instrumentNextjs(
           nextServer.default,
           {
-            getRequestMeta: require(
-              path.resolve('node_modules/next/dist/server/request-meta.js')
-            ).getRequestMeta
+            getRequestMeta: require(path.resolve(
+              'node_modules/next/dist/server/request-meta.js'
+            )).getRequestMeta
           },
           {
             counter: this.requestsCounter,
@@ -471,7 +471,7 @@ export class OpenAPM extends LevitateEvents {
   }
 }
 
-export function metricClient() {
+export function getMetricClient() {
   return promClient;
 }
 
