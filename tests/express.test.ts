@@ -49,6 +49,15 @@ describe('REDMiddleware', () => {
     ).toBe(NUMBER_OF_REQUESTS);
   });
 
+  test('Captures Custom Counter Metrics - App', async () => {
+    expect(
+      parseInt(
+        parsedData?.find((m) => m.name === 'custom_counter')?.metrics[0]
+          .value ?? '0'
+      )
+    ).toBe(NUMBER_OF_REQUESTS);
+  });
+
   test('Captures Counter Metrics - Router', async () => {
     expect(
       parseInt(

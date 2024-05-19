@@ -2,9 +2,15 @@ import request from 'supertest';
 import express from 'express';
 import type { Express } from 'express';
 import { setOpenAPMLabels } from '../src/async-local-storage.http';
+import { metricClient } from '../src/OpenAPM';
 
 export const addRoutes = (app: Express) => {
   const router = express.Router();
+  const client = metricClient();
+  const counter = new client.Counter({
+    name: 'custom_counter',
+    help: 'no. of times operation is called'
+  });
 
   router.get('/:id', (req, res) => {
     const { id } = req.params;
@@ -14,6 +20,7 @@ export const addRoutes = (app: Express) => {
   app.use('/api/router/', router);
   app.get('/api/:id', (req, res) => {
     const { id } = req.params;
+    counter.inc();
     res.status(200).send(id);
   });
 
