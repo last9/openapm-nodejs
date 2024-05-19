@@ -20,14 +20,6 @@ export const addRoutes = (app: Express) => {
     labelNames: ['service']
   });
 
-  // dummy counter to make sure the https://github.com/yunyu/parse-prometheus-text-format
-  // library parses the above counter into array from the text format.
-  // TODO: We should get rid of https://github.com/yunyu/parse-prometheus-text-format
-  const dummy = new client.Counter({
-    name: 'dummy_counter_total',
-    help: 'dummy counter'
-  });
-
   router.get('/:id', (req, res) => {
     const { id } = req.params;
     ``;
