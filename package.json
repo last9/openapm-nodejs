@@ -4,6 +4,7 @@
   "version": "0.9.3-alpha.2",
   "main": "dist/src/index.js",
   "module": "dist/esm/src/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsup",
     "build:watch": "tsup --watch",
