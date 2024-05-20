@@ -35,7 +35,6 @@ export type ExtractFromParams = {
 export type DefaultLabels =
   | 'environment'
   | 'program'
-  | 'ip'
   | 'version'
   | 'host';
 
@@ -187,8 +186,7 @@ export class OpenAPM extends LevitateEvents {
       environment: this.environment,
       program: packageJson?.name ?? '',
       version: packageJson?.version ?? '',
-      host: os.hostname(),
-      ip: getHostIpAddress(),
+      host: os.hostname(),      
       ...this.defaultLabels
     };
 
