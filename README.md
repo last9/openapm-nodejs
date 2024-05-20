@@ -249,6 +249,30 @@ const handler = () => {
 };
 ```
 
+5. Defining custom metrics
+
+OpenAPM exposes underlying `prom-client` via `getMetricClient` function.
+
+```js
+const { getMetricClient } = require('@last9/openapm');
+
+// initialize custom metric
+const client = getMetricClient();
+const counter = new client.Counter({
+  name: 'cancelation_calls',
+  help: 'no. of times cancel operation is called'
+});
+
+// handler
+app.get('/cancel/:ids', (req, res) => {
+  counter.inc();
+  res.status(200).json({});
+});
+```
+
+Follow the [documentation of prom-client](https://github.com/siimon/prom-client?tab=readme-ov-file#custom-metrics)
+to get familiar with the DSL for defining custom metrics.
+
 ## Setup locally
 
 Make sure you are in the express directory.

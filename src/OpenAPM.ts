@@ -469,4 +469,8 @@ export class OpenAPM extends LevitateEvents {
   }
 }
 
+export function getMetricClient() {
+  return promClient;
+}
+
 export default OpenAPM;

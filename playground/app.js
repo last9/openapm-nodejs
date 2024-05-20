@@ -5,7 +5,11 @@
  *  */
 require('dotenv').config();
 const express = require('express');
-const { OpenAPM, setOpenAPMLabels } = require('../dist/src/index.js');
+const {
+  OpenAPM,
+  setOpenAPMLabels,
+  metricClient
+} = require('../dist/src/index.js');
 const mysql2 = require('mysql2');
 
 const openapm = new OpenAPM({
@@ -37,6 +41,12 @@ const pool = mysql2.createPool(
   'mysql://express-app:password@127.0.0.1/express' //  If this throws an error, Change the db url to the one you're running on your machine locally or the testing instance you might have hosted.
 );
 
+const client = metricClient();
+const counter = new client.Counter({
+  name: 'cancelation_calls',
+  help: 'no. of times cancel operation is called'
+});
+
 app.get('/result', (req, res) => {
   pool.getConnection((err, conn) => {
     conn.query(
@@ -59,6 +69,7 @@ app.get('/organizations/:org/users', (req, res) => {
 });
 
 app.get('/cancel/:ids', (req, res) => {
+  counter.inc();
   res.status(200).json({});
 });
 

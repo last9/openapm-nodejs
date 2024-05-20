@@ -2,18 +2,36 @@ import request from 'supertest';
 import express from 'express';
 import type { Express } from 'express';
 import { setOpenAPMLabels } from '../src/async-local-storage.http';
+import { getMetricClient } from '../src/OpenAPM';
 
 export const addRoutes = (app: Express) => {
   const router = express.Router();
 
+  const client = getMetricClient();
+
+  const gauge = new client.Gauge({
+    name: 'custom_gauge',
+    help: 'custom gauge'
+  });
+
+  const counter = new client.Counter({
+    name: 'custom_counter_total',
+    help: 'custom counter',
+    labelNames: ['service']
+  });
+
   router.get('/:id', (req, res) => {
     const { id } = req.params;
     ``;
+    gauge.set(42);
     res.status(200).send(id);
   });
+
   app.use('/api/router/', router);
+
   app.get('/api/:id', (req, res) => {
     const { id } = req.params;
+    counter.inc({ service: 'express' });
     res.status(200).send(id);
   });
 
