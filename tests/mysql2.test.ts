@@ -88,7 +88,7 @@ describe('mysql2', () => {
     expect(
       // @ts-ignore
       histogram.hashMap[
-        'database_name:test_db,query:SELECT * FROM users;,status:success'
+        'database_name:test_db,query:SELECT * FROM users;,status:success,'
       ]?.count
     ).toBe(NUMBER_OF_REQUESTS);
   });
@@ -105,7 +105,7 @@ describe('mysql2', () => {
     expect(
       // @ts-ignore
       histogram.hashMap[
-        'database_name:test_db,query:SELECT * FROM user;,status:failure'
+        'database_name:test_db,query:SELECT * FROM user;,status:failure,'
       ]?.count
     ).toBe(NUMBER_OF_REQUESTS);
   });
@@ -126,7 +126,7 @@ describe('mysql2', () => {
     expect(
       // @ts-ignore
       histogram.hashMap[
-        'database_name:test_db,query:SELECT * FROM users;,status:success'
+        'database_name:test_db,query:SELECT * FROM users;,status:success,'
       ]?.count
     ).toBe(NUMBER_OF_REQUESTS * 2);
   });
@@ -143,7 +143,7 @@ describe('mysql2', () => {
     expect(
       // @ts-ignore
       histogram.hashMap[
-        'database_name:test_db,query:SELECT * FROM users;,status:success'
+        'database_name:test_db,query:SELECT * FROM users;,status:success,'
       ]?.count
     ).toBe(NUMBER_OF_REQUESTS * 2);
   });

@@ -33,6 +33,11 @@ runPrismaTests() {
   npm run vitest -t ./tests/prisma/*.test.ts 
 }
 
+# Run MySQL tests
+runMysqlTests() {
+  npm run vitest -t ./tests/mysql2.test.ts
+}
+
 # Check if a variable is passed
 if [ "$1" = "express" ]; then
   npm run vitest -t ./tests/express.test.ts 
@@ -47,6 +52,8 @@ elif [ "$1" = "nestjs" ]; then
     runNestJsTests
 elif [ "$1" = "prisma" ]; then
   runPrismaTests
+elif [ "$1" = "mysql2" ]; then
+  runAllTests
 else
   runAllTests
 fi
