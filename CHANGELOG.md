@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Exposed `prom-client` using `getMetricClient` function.
 
+### Updates
+
+- Upgrade `prom-client`
+
 ## [0.9.1]
 
 ### Updated
