@@ -85,8 +85,6 @@ describe('mysql2', () => {
       'db_requests_duration_milliseconds'
     ) as Histogram;
 
-    console.log(histogram.hashMap);
-
     expect(
       // @ts-ignore
       histogram.hashMap[
