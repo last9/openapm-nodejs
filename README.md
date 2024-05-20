@@ -251,15 +251,13 @@ const handler = () => {
 
 5. Defining custom metrics
 
-OpenAPM exposes underlying `prom-client` via `metricClient` function.
+OpenAPM exposes underlying `prom-client` via `getMetricClient` function.
 
-``` js
-const {
-  metricClient
-} = require('@last9/openapm');
+```js
+const { getMetricClient } = require('@last9/openapm');
 
 // initialize custom metric
-const client = metricClient();
+const client = getMetricClient();
 const counter = new client.Counter({
   name: 'cancelation_calls',
   help: 'no. of times cancel operation is called'
