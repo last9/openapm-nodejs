@@ -13,12 +13,13 @@ import type {
 import type { NextFunction, Request, Response } from 'express';
 import type { IncomingMessage, ServerResponse, Server } from 'http';
 
-import { getHostIpAddress, getPackageJson, getSanitizedPath } from './utils';
+import { getPackageJson, getSanitizedPath } from './utils';
 
 import { instrumentExpress } from './clients/express';
 import { instrumentMySQL } from './clients/mysql2';
 import { instrumentNestFactory } from './clients/nestjs';
 import { instrumentNextjs } from './clients/nextjs';
+import { instrumentFetch } from './clients/fetch';
 
 import { LevitateConfig, LevitateEvents } from './levitate/events';
 import {
@@ -32,11 +33,7 @@ export type ExtractFromParams = {
   mask: string;
 };
 
-export type DefaultLabels =
-  | 'environment'
-  | 'program'
-  | 'version'
-  | 'host';
+export type DefaultLabels = 'environment' | 'program' | 'version' | 'host';
 
 export interface OpenAPMOptions {
   /**
@@ -142,6 +139,7 @@ export class OpenAPM extends LevitateEvents {
     if (this.enabled) {
       this.initiateMetricsRoute();
       this.initiatePromClient();
+      this.instrumentThirdParty();
     }
   }
 
@@ -186,7 +184,7 @@ export class OpenAPM extends LevitateEvents {
       environment: this.environment,
       program: packageJson?.name ?? '',
       version: packageJson?.version ?? '',
-      host: os.hostname(),      
+      host: os.hostname(),
       ...this.defaultLabels
     };
 
@@ -416,6 +414,30 @@ export class OpenAPM extends LevitateEvents {
     return metrics.trim();
   };
 
+  private instrumentThirdParty = () => {
+    // wrap(http, 'request', (original): typeof http.request => {
+    //   return function (
+    //     this: typeof original,
+    //     ...args: Parameters<typeof original>
+    //   ) {
+    //     console.log('OpenAPM: http.request', args);
+    //     return original.apply(this, args);
+    //   } as typeof http.request;
+    // });
+
+    // wrap(https, 'request', (original): typeof http.request => {
+    //   return function (
+    //     this: typeof original,
+    //     ...args: Parameters<typeof original>
+    //   ) {
+    //     console.log('OpenAPM: http.request', args);
+    //     return original.apply(this, args);
+    //   } as typeof http.request;
+    // });
+
+    instrumentFetch();
+  };
+
   public instrument(moduleName: SupportedModules): boolean {
     if (!this.enabled) {
       return false;
@@ -467,10 +489,6 @@ export class OpenAPM extends LevitateEvents {
       }
     }
   }
-}
-
-export function getMetricClient() {
-  return promClient;
 }
 
 export default OpenAPM;

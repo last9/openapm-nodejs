@@ -1,8 +1,9 @@
 import request from 'supertest';
 import express from 'express';
+import axios from 'axios';
 import type { Express } from 'express';
 import { setOpenAPMLabels } from '../src/async-local-storage.http';
-import { getMetricClient } from '../src/OpenAPM';
+import { getMetricClient } from '../src/get-metric-client';
 
 export const addRoutes = (app: Express) => {
   const router = express.Router();
@@ -39,6 +40,19 @@ export const addRoutes = (app: Express) => {
     const { id } = req.params;
     setOpenAPMLabels({ id });
     res.status(200).send(id);
+  });
+
+  app.get('/cat-facts', async (req, res) => {
+    const catFacts = await fetch('https://cat-fact.herokuapp.com/facts', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+      .then((res) => res.json())
+      .then((json) => json.all);
+
+    res.status(200).send(catFacts);
   });
 
   return app;

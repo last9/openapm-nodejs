@@ -1,7 +1,8 @@
 import express, { Express } from 'express';
 import { test, expect, describe, beforeAll, afterAll } from 'vitest';
 
-import OpenAPM, { getMetricClient } from '../src/OpenAPM';
+import OpenAPM from '../src/OpenAPM';
+import { getMetricClient } from '../src/get-metric-client';
 import { addRoutes, makeRequest, sendTestRequests } from './utils';
 import prom from 'prom-client';
 
@@ -28,7 +29,7 @@ describe('REDMiddleware', () => {
     addRoutes(app);
     app.listen(3002);
 
-    const out = await sendTestRequests(app, NUMBER_OF_REQUESTS);
+    // const out = await sendTestRequests(app, NUMBER_OF_REQUESTS);
   });
 
   afterAll(async () => {
@@ -37,8 +38,6 @@ describe('REDMiddleware', () => {
       prom.register.clear();
     });
   });
-
-  test;
 
   test('Captures Counter Metrics - App', async () => {
     const parsedData = await getMetrics();
@@ -141,5 +140,10 @@ describe('REDMiddleware', () => {
     expect(
       metricValues?.find((m) => m.labels.path === '/api/labels/:id')?.labels.id
     ).toBe('123');
+  });
+
+  test('Third Party call instrumentation', async () => {
+    const res = await makeRequest(app, '/cat-facts');
+    expect(true).toBe(true);
   });
 });

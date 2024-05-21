@@ -8,7 +8,7 @@ const express = require('express');
 const {
   OpenAPM,
   setOpenAPMLabels,
-  metricClient
+  getMetricClient
 } = require('../dist/src/index.js');
 const mysql2 = require('mysql2');
 
@@ -41,7 +41,7 @@ const pool = mysql2.createPool(
   'mysql://express-app:password@127.0.0.1/express' //  If this throws an error, Change the db url to the one you're running on your machine locally or the testing instance you might have hosted.
 );
 
-const client = metricClient();
+const client = getMetricClient();
 const counter = new client.Counter({
   name: 'cancelation_calls',
   help: 'no. of times cancel operation is called'
@@ -75,6 +75,19 @@ app.get('/cancel/:ids', (req, res) => {
 
 app.post('/api/v2/product/search/:term', (req, res) => {
   res.status(200).json({});
+});
+
+app.get('/cat-facts', async (req, res) => {
+  const catFacts = await fetch('https://cat-fact.herokuapp.com/facts', {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+    .then((res) => res.json())
+    .then((json) => json.all);
+
+  res.status(200).json(catFacts);
 });
 
 app.all('/api/v1/slug/:slug', (req, res) => {
