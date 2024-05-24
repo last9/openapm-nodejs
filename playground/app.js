@@ -5,7 +5,7 @@
  *  */
 require('dotenv').config();
 var express = require('express');
-var { OpenAPM } = require('../dist/index.js');
+var { OpenAPM } = require('../dist/src/index.js');
 var pg = require('pg');
 // var mysql2 = require('mysql2');
 
@@ -52,7 +52,9 @@ app.get('/result', async (req, res) => {
   // await client.query(`INSERT INTO "users" (username) VALUES ('JohnDoe');`);
   let result;
   try {
-    result = await client.query('select * from users;');
+    result = await client.query(
+      "select * from users where username='JohnDoe';"
+    );
   } catch (error) {}
 
   res.status(200).json({

@@ -80,19 +80,14 @@ export interface OpenAPMOptions {
   levitateConfig?: LevitateConfig;
 }
 
-export type SupportedModules =
-  | 'express'
-  | 'mysql'
-  | 'nestjs'
-  | 'nextjs'
-  | 'postgres';
+export type SupportedModules = 'express' | 'mysql' | 'nestjs' | 'nextjs' | 'pg';
 
 const moduleNames = {
   express: 'express',
   mysql: 'mysql2',
   nestjs: '@nestjs/core',
   nextjs: 'next',
-  postgres: 'pg'
+  pg: 'pg'
 };
 
 const packageJson = getPackageJson();
@@ -457,7 +452,7 @@ export class OpenAPM extends LevitateEvents {
         );
       }
 
-      if (moduleName === 'postgres') {
+      if (moduleName === 'pg') {
         const pg = require('pg');
         instrumentPG(pg);
       }
