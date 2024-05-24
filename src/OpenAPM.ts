@@ -2,6 +2,7 @@ import * as os from 'os';
 import http from 'http';
 import ResponseTime from 'response-time';
 import promClient from 'prom-client';
+import path from 'path';
 
 import type {
   Counter,
@@ -9,7 +10,7 @@ import type {
   Histogram,
   HistogramConfiguration
 } from 'prom-client';
-import type { Request } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import type { IncomingMessage, ServerResponse, Server } from 'http';
 
 import { getHostIpAddress, getPackageJson, getSanitizedPath } from './utils';
@@ -17,8 +18,14 @@ import { getHostIpAddress, getPackageJson, getSanitizedPath } from './utils';
 import { instrumentExpress } from './clients/express';
 import { instrumentMySQL } from './clients/mysql2';
 import { instrumentNestFactory } from './clients/nestjs';
+import { instrumentNextjs } from './clients/nextjs';
+
 import { LevitateConfig, LevitateEvents } from './levitate/events';
 import { instrumentPG } from './clients/pg';
+import {
+  getHTTPRequestStore,
+  runInHTTPRequestStore
+} from './async-local-storage.http';
 
 export type ExtractFromParams = {
   from: 'params';
@@ -26,14 +33,18 @@ export type ExtractFromParams = {
   mask: string;
 };
 
-export type DefaultLabels =
-  | 'environment'
-  | 'program'
-  | 'ip'
-  | 'version'
-  | 'host';
+export type DefaultLabels = 'environment' | 'program' | 'version' | 'host';
 
 export interface OpenAPMOptions {
+  /**
+   * Enable the OpenAPM
+   */
+  enabled?: boolean;
+  /**
+   * Enable the metrics server
+   * @default true
+   */
+  enableMetricsServer?: boolean;
   /** Route where the metrics will be exposed
    * @default "/metrics"
    */
@@ -49,9 +60,14 @@ export interface OpenAPMOptions {
   /** Any default labels you want to include */
   defaultLabels?: Record<string, string>;
   /** Accepts configuration for Prometheus Counter  */
-  requestsCounterConfig?: CounterConfiguration<string>;
+  requestsCounterConfig?: Omit<CounterConfiguration<string>, 'labelNames'>;
   /** Accepts configuration for Prometheus Histogram */
-  requestDurationHistogramConfig?: HistogramConfiguration<string>;
+  requestDurationHistogramConfig?: Omit<
+    HistogramConfiguration<string>,
+    'labelNames'
+  >;
+  /** Additional Labels for the HTTP requests */
+  additionalLabels?: Array<string>;
   /** Extract labels from URL params, subdomain, header */
   extractLabels?: Record<string, ExtractFromParams>;
   /**
@@ -64,25 +80,35 @@ export interface OpenAPMOptions {
   levitateConfig?: LevitateConfig;
 }
 
-export type SupportedModules = 'express' | 'mysql' | 'nestjs' | 'postgres';
+export type SupportedModules =
+  | 'express'
+  | 'mysql'
+  | 'nestjs'
+  | 'nextjs'
+  | 'postgres';
 
 const moduleNames = {
   express: 'express',
   mysql: 'mysql2',
   nestjs: '@nestjs/core',
+  nextjs: 'next',
   postgres: 'pg'
 };
 
 const packageJson = getPackageJson();
 
 export class OpenAPM extends LevitateEvents {
+  public simpleCache: Record<string, any> = {};
   private path: string;
   private metricsServerPort: number;
+  private enabled: boolean;
+  private enableMetricsServer: boolean;
   readonly environment: string;
   readonly program: string;
   private defaultLabels?: Record<string, string>;
-  private requestsCounterConfig: CounterConfiguration<string>;
-  private requestDurationHistogramConfig: HistogramConfiguration<string>;
+  readonly requestsCounterConfig: CounterConfiguration<string>;
+  readonly requestDurationHistogramConfig: HistogramConfiguration<string>;
+  readonly requestLabels: Array<string> = [];
   private requestsCounter?: Counter;
   private requestsDurationHistogram?: Histogram;
   private extractLabels?: Record<string, ExtractFromParams>;
@@ -94,49 +120,76 @@ export class OpenAPM extends LevitateEvents {
   constructor(options?: OpenAPMOptions) {
     super(options);
     // Initializing all the options
+    this.enabled = options?.enabled ?? true;
     this.path = options?.path ?? '/metrics';
     this.metricsServerPort = options?.metricsServerPort ?? 9097;
+    this.enableMetricsServer = options?.enableMetricsServer ?? true;
     this.environment = options?.environment ?? 'production';
     this.program = packageJson?.name ?? '';
     this.defaultLabels = options?.defaultLabels;
-    this.requestsCounterConfig = options?.requestsCounterConfig ?? {
-      name: 'http_requests_total',
-      help: 'Total number of requests',
-      labelNames: [
-        'path',
-        'method',
-        'status',
-        ...(options?.extractLabels ? Object.keys(options?.extractLabels) : [])
-      ]
-    };
+    this.requestLabels = [
+      'path',
+      'method',
+      'status',
+      ...(options?.extractLabels ? Object.keys(options?.extractLabels) : []),
+      ...(options?.additionalLabels ?? [])
+    ];
+    this.requestsCounterConfig = this.setRequestCounterConfig(options);
     this.requestDurationHistogramConfig =
-      options?.requestDurationHistogramConfig || {
-        name: 'http_requests_duration_milliseconds',
-        help: 'Duration of HTTP requests in milliseconds',
-        labelNames: [
-          'path',
-          'method',
-          'status',
-          ...(options?.extractLabels ? Object.keys(options?.extractLabels) : []) // If the extractLabels exists add the labels to the label set
-        ],
-        buckets: promClient.exponentialBuckets(0.25, 1.5, 31)
-      };
+      this.setRequestDurationHistogramConfig(options);
 
     this.extractLabels = options?.extractLabels ?? {};
     this.customPathsToMask = options?.customPathsToMask;
     this.excludeDefaultLabels = options?.excludeDefaultLabels;
 
-    this.initiateMetricsRoute();
-    this.initiatePromClient();
+    if (this.enabled) {
+      this.initiateMetricsRoute();
+      this.initiatePromClient();
+    }
   }
+
+  private setRequestCounterConfig = (options?: OpenAPMOptions) => {
+    const { requestsCounterConfig, extractLabels } = options ?? {};
+    const defaultConfig = {
+      name: 'http_requests_total',
+      help: 'Total number of requests',
+      labelNames: this.requestLabels
+    };
+
+    // @ts-ignore
+    const { labelNames: _, ...restConfig } = requestsCounterConfig ?? {};
+
+    return {
+      ...defaultConfig,
+      ...(restConfig ?? {})
+    };
+  };
+
+  private setRequestDurationHistogramConfig = (options?: OpenAPMOptions) => {
+    const { requestDurationHistogramConfig, extractLabels } = options ?? {};
+    const defaultConfig = {
+      name: 'http_requests_duration_milliseconds',
+      help: 'Duration of HTTP requests in milliseconds',
+      labelNames: this.requestLabels,
+      buckets: promClient.exponentialBuckets(0.25, 1.5, 31)
+    };
+
+    // @ts-ignore
+    const { labelNames: _, ...restConfig } =
+      requestDurationHistogramConfig ?? {};
+
+    return {
+      ...defaultConfig,
+      ...(restConfig ?? {})
+    };
+  };
 
   private getDefaultLabels = () => {
     const defaultLabels = {
       environment: this.environment,
-      program: packageJson.name,
-      version: packageJson.version,
+      program: packageJson?.name ?? '',
+      version: packageJson?.version ?? '',
       host: os.hostname(),
-      ip: getHostIpAddress(),
       ...this.defaultLabels
     };
 
@@ -164,14 +217,42 @@ export class OpenAPM extends LevitateEvents {
     );
   };
 
+  public shutdown = async () => {
+    return new Promise((resolve, reject) => {
+      if (!this.enabled) {
+        resolve(undefined);
+      }
+      if (this.enableMetricsServer) {
+        console.log('Shutting down metrics server gracefully.');
+      }
+      this.metricsServer?.close((err) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        resolve(undefined);
+        console.log('Metrics server shut down gracefully.');
+      });
+
+      promClient.register.clear();
+      resolve(undefined);
+    });
+  };
+
   private initiateMetricsRoute = () => {
+    // Enabling metrics server runs a separate process for the metrics server that a Prometheus agent can scrape. If it is not enabled, metrics are exposed in the same process as the web application.
+    if (!this.enableMetricsServer) {
+      return;
+    }
     // Creating native http server
     this.metricsServer = http.createServer(async (req, res) => {
       // Sanitize the path
       const path = getSanitizedPath(req.url ?? '/');
       if (path === this.path && req.method === 'GET') {
         res.setHeader('Content-Type', promClient.register.contentType);
-        return res.end(await promClient.register.metrics());
+        const metrics = await this.getMetrics();
+        return res.end(metrics);
       } else {
         res.statusCode = 404;
         res.end('404 Not found');
@@ -238,40 +319,66 @@ export class OpenAPM extends LevitateEvents {
    * Middleware Function, which is essentially the response-time middleware with a callback that captures the
    * metrics
    */
-  private _REDMiddleware = ResponseTime(
-    (
-      req: IncomingMessage & Request,
-      res: ServerResponse<IncomingMessage>,
-      time: number
-    ) => {
-      const sanitizedPathname = getSanitizedPath(req.originalUrl ?? '/');
-      // Extract labels from the request params
-      const { pathname, labels: parsedLabelsFromPathname } =
-        this.parseLabelsFromParams(sanitizedPathname, req.params);
-      // Make sure you copy baseURL as well in case of nested routes.
-      const path = req.route ? req.baseUrl + req.route?.path : pathname;
-      const labels: Record<string, string> = {
-        path: path,
-        status: res.statusCode.toString(),
-        method: req.method as string,
-        ...parsedLabelsFromPathname
-      };
 
-      // Create an array of arguments in the same sequence as label names
-      const requestsCounterArgs = this.requestsCounterConfig.labelNames?.map(
-        (labelName) => {
-          return labels[labelName] ?? '';
+  private _REDMiddleware = (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    runInHTTPRequestStore(() => {
+      ResponseTime(
+        (
+          req: IncomingMessage & Request,
+          res: ServerResponse<IncomingMessage>,
+          time: number
+        ) => {
+          if (!this.enabled) {
+            return;
+          }
+          const store = getHTTPRequestStore();
+          const sanitizedPathname = getSanitizedPath(req.originalUrl ?? '/');
+          // Extract labels from the request params
+          const { pathname, labels: parsedLabelsFromPathname } =
+            this.parseLabelsFromParams(sanitizedPathname, req.params);
+
+          // Skip the OPTIONS requests not to blow up cardinality. Express does not provide
+          // information about the route for OPTIONS requests, which makes it very
+          // hard to detect correct PATH. Until we fix it properly, the requests are skipped
+          // to not blow up the cardinality.
+          if (!req.route && req.method === 'OPTIONS') {
+            return;
+          }
+
+          // Make sure you copy baseURL in case of nested routes.
+          const path = req.route ? req.baseUrl + req.route?.path : pathname;
+
+          const labels: Record<string, string> = {
+            path,
+            status: res.statusCode.toString(),
+            method: req.method as string,
+            ...parsedLabelsFromPathname,
+            ...(store?.labels ?? {})
+          };
+
+          // Create an array of arguments in the same sequence as label names
+          const requestsCounterArgs =
+            this.requestsCounterConfig.labelNames?.map((labelName) => {
+              return labels[labelName] ?? '';
+            });
+
+          try {
+            if (requestsCounterArgs) {
+              this.requestsCounter?.inc(labels);
+              this.requestsDurationHistogram?.observe(labels, time);
+              // ?.labels(...requestsCounterArgs)
+            }
+          } catch (err) {
+            console.error('OpenAPM:', err);
+          }
         }
-      );
-
-      if (requestsCounterArgs) {
-        this.requestsCounter?.labels(...requestsCounterArgs).inc();
-        this.requestsDurationHistogram
-          ?.labels(...requestsCounterArgs)
-          .observe(time);
-      }
-    }
-  );
+      )(req, res, next);
+    });
+  };
 
   /**
    * Middleware Function, which is essentially the response-time middleware with a callback that captures the
@@ -280,7 +387,42 @@ export class OpenAPM extends LevitateEvents {
    */
   public REDMiddleware = this._REDMiddleware;
 
-  public instrument(moduleName: SupportedModules) {
+  public getMetrics = async (): Promise<string> => {
+    let metrics = '';
+    if (!this.enabled) {
+      return metrics;
+    }
+    if (
+      typeof this.simpleCache['prisma:installed'] === 'undefined' ||
+      this.simpleCache['prisma:installed']
+    ) {
+      try {
+        // TODO: Make prisma implementation more generic so that it can be used with other ORMs, DBs and libraries
+        const { PrismaClient } = require('@prisma/client');
+        const prisma = new PrismaClient();
+        const prismaMetrics = prisma ? await prisma.$metrics.prometheus() : '';
+        metrics += prisma ? prismaMetrics : '';
+
+        this.simpleCache['prisma:installed'] = true;
+        await prisma.$disconnect();
+      } catch (error) {
+        this.simpleCache['prisma:installed'] = false;
+      }
+    }
+
+    metrics += await promClient.register.metrics();
+
+    if (metrics.startsWith('"') && metrics.endsWith('"')) {
+      metrics = metrics.slice(1, -1);
+    }
+
+    return metrics.trim();
+  };
+
+  public instrument(moduleName: SupportedModules): boolean {
+    if (!this.enabled) {
+      return false;
+    }
     try {
       if (moduleName === 'express') {
         const express = require('express');
@@ -294,13 +436,36 @@ export class OpenAPM extends LevitateEvents {
         const { NestFactory } = require('@nestjs/core');
         instrumentNestFactory(NestFactory, this._REDMiddleware);
       }
+
+      if (moduleName === 'nextjs') {
+        const nextServer = require(path.resolve(
+          'node_modules/next/dist/server/next-server.js'
+        ));
+
+        instrumentNextjs(
+          nextServer.default,
+          {
+            getRequestMeta: require(path.resolve(
+              'node_modules/next/dist/server/request-meta.js'
+            )).getRequestMeta
+          },
+          {
+            counter: this.requestsCounter,
+            histogram: this.requestsDurationHistogram
+          },
+          this
+        );
+      }
+
       if (moduleName === 'postgres') {
         const pg = require('pg');
         instrumentPG(pg);
       }
+
+      return true;
     } catch (error) {
+      console.error('OpenAPM:', error);
       if (Object.keys(moduleNames).includes(moduleName)) {
-        console.log(error);
         throw new Error(
           `OpenAPM couldn't import the ${moduleNames[moduleName]} package, please install it.`
         );
@@ -311,6 +476,10 @@ export class OpenAPM extends LevitateEvents {
       }
     }
   }
+}
+
+export function getMetricClient() {
+  return promClient;
 }
 
 export default OpenAPM;

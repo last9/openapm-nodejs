@@ -4,8 +4,10 @@ module.exports = {
   plugins: ['@typescript-eslint'],
   root: true,
   rules: {
-    prettier: {
-      'space-before-function-paren': ['error', 'never']
-    }
+    'func-call-spacing': 'off',
+    'space-before-function-paren': 'off',
+    '@typescript-eslint/no-var-requires': 'off',
+    '@typescript-eslint/ban-ts-comment': 'off',
+    indent: '10'
   }
 };

@@ -1,9 +1,9 @@
-import { describe, beforeAll, expect, test, vi, afterAll } from 'vitest';
-import mysql2, { Connection, Pool, PoolCluster, PoolNamespace } from 'mysql2';
+import { describe, beforeAll, expect, test, afterAll } from 'vitest';
+import mysql2, { Connection, Pool, PoolCluster } from 'mysql2';
 import { instrumentMySQL, symbols } from '../src/clients/mysql2';
 import prom, { Histogram } from 'prom-client';
 
-const connectionUri = `mysql://root@localhost:3306/test_db`;
+const connectionUri = 'mysql://root@localhost:3306/test_db';
 
 const sendTestRequest = async (conn: Connection | Pool, query: string) => {
   return new Promise((resolve) => {
@@ -88,7 +88,7 @@ describe('mysql2', () => {
     expect(
       // @ts-ignore
       histogram.hashMap[
-        'database_name:test_db,query:SELECT * FROM users;,status:success'
+        'database_name:test_db,query:SELECT * FROM users;,status:success,'
       ]?.count
     ).toBe(NUMBER_OF_REQUESTS);
   });
@@ -105,7 +105,7 @@ describe('mysql2', () => {
     expect(
       // @ts-ignore
       histogram.hashMap[
-        'database_name:test_db,query:SELECT * FROM user;,status:failure'
+        'database_name:test_db,query:SELECT * FROM user;,status:failure,'
       ]?.count
     ).toBe(NUMBER_OF_REQUESTS);
   });
@@ -126,7 +126,7 @@ describe('mysql2', () => {
     expect(
       // @ts-ignore
       histogram.hashMap[
-        'database_name:test_db,query:SELECT * FROM users;,status:success'
+        'database_name:test_db,query:SELECT * FROM users;,status:success,'
       ]?.count
     ).toBe(NUMBER_OF_REQUESTS * 2);
   });
@@ -143,7 +143,7 @@ describe('mysql2', () => {
     expect(
       // @ts-ignore
       histogram.hashMap[
-        'database_name:test_db,query:SELECT * FROM users;,status:success'
+        'database_name:test_db,query:SELECT * FROM users;,status:success,'
       ]?.count
     ).toBe(NUMBER_OF_REQUESTS * 2);
   });

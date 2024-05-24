@@ -2,6 +2,17 @@
 
 # @last9/openapm
 
+An APM solution based on metrics and open-source tools such as Prometheus and Grafana for NodeJs-based applications.
+
+## Table of Contents
+
+1. [Installation](#installation)
+2. [Usage](#usage)
+3. [Options](#options)
+4. [API Reference](#api-reference)
+5. [Setup Locally](#setup-locally)
+6. [Grafana Dashboard View](#grafana-dashboard-view)
+
 ## Installation
 
 ```
@@ -10,10 +21,39 @@ npm install --save @last9/openapm@latest
 
 ## Usage
 
+```js
+const express = require('express');
+const { OpenAPM } = require('@last9/openapm');
+
+const app = express();
+const openapm = new OpenAPM();
+
+// Instrument services
+
+app.listen(3000);
+
+const gracefullyShutdown = () => {
+  app.close(() => {
+    openapm
+      .shutdown()
+      .then(() => {
+        console.log('OpenAPM shutdown successful.');
+      })
+      .catch((err) => {
+        console.log('Error shutting down OpenAPM', err);
+      });
+  });
+};
+
+process.on('SIGINT', gracefullyShutdown);
+process.on('SIGTERM', gracefullyShutdown);
+```
+
 1. [Express](#express)
 2. [MySQL](#mysql)
 3. [NestJS](#nestjs)
-4. [Postgres](#postgres)
+4. [Next.js](#nextjs)
+5. [Postgres](#postgres)
 
 ### Express
 
@@ -22,18 +62,10 @@ change the port, you can update it through the options
 ([See the options documentation](#options)).
 
 ```js
-const express = require('express)
-const { OpenAPM } = require('@last9/openapm')
-
-const app = express();
+const { OpenAPM } = require('@last9/openapm');
 const openapm = new OpenAPM();
 
-app.use(openapm.REDMiddleware);
-
-// ...
-
-app.listen(3000)
-
+openapm.instrument('express');
 ```
 
 ### MySQL
@@ -61,6 +93,16 @@ This currently supports instrumentation for all Node.js ORMs, that uses [pg](htt
 ```js
 openapm.instrument('postgres');
 ```
+
+### Next.js
+
+OpenAPM supports RED metrics for both pages and app router in a Next.js application.
+
+```js
+openapm.instrument('nextjs');
+```
+
+> Note: You can only use the library if Next.js runs in a Node.js environment. Since OpenAPM relies on prom-client for capturing metrics data, a serverless environment might not be able persist them.
 
 ## Options
 
@@ -126,6 +168,8 @@ const openapm = new OpenAPM({
 
 9. `levitateConfig`: (Optional) Configuration for Levitate TSDB. Adding this configuration will enable the [Change Events](https://docs.last9.io/docs/change-events).
 
+10. `enableMetricsServer`: (Optional) Defaults to `true`. When set to `false` the OpenAPM won't start a metrics server. To get the metrics users can rely on the `.getMetrics()` function.
+
 ```js
 {
    ...
@@ -139,6 +183,104 @@ const openapm = new OpenAPM({
    }
 }
 ```
+
+11. `enabled`: (Optional) Defaults to `true`. When set to `false` OpenAPM will be disabled and no metrics will be collected or emitted.
+
+```
+const openapm = new OpenAPM({
+  enabled: process.env.NODE_ENV === 'production'
+})
+```
+
+12. `additionalLabels`: (Optional) Accepts an array of label keys that will be emitted with the metrics. This option is used in tandem with the `setOpenAPMLabels` API. Checkout [API Reference](#api-reference)
+
+```
+const openapm = new OpenAPM({
+  additionalLabels: ['slug']
+})
+```
+
+## API Reference
+
+1. `instrument`: Used to instrument supported technologies. Refer the [usage](#usage) section.
+
+2. `getMetrics`: Returns a Promise of string which contains metrics in Prometheus exposition format. You can use this function to expose a metrics endpoint if `enableMetricsServer` is set to false. For example,
+
+```js
+const openapm = new OpenAPM({
+  enableMetricsServer: false
+});
+
+openapm.instrument('express');
+
+const app = express();
+
+app.get('/metrics', async (_, res) => {
+  const metrics = await openapm.getMetrics();
+  res.setHeader('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+  res.end(metrics);
+});
+```
+
+3. `shutdown`: Returns a promise which is resolved after the cleanup in OpenAPM. The cleanup includes closing the metrics server if it has started and cleared the prom-client register.
+
+```js
+const gracefullyShutdown = () => {
+  server.close(() => {
+    openapm
+      .shutdown()
+      .then(() => {
+        console.log('OpenAPM shutdown successful.');
+      })
+      .catch((err) => {
+        console.log('Error shutting down OpenAPM', err);
+      });
+  });
+};
+
+process.on('SIGINT', gracefullyShutdown);
+process.on('SIGTERM', gracefullyShutdown);
+```
+
+4. `setOpenAPMLabels`: Unlike other APIs. You can directly import `setOpenAPMLabels` in any file to set custom labels to the request. Make sure to mention the label key in `additionalLabels` option. This function can set multiple labels in the metrics emitted by the ongoing HTTP request.
+
+Note: `setOpenAPMLabels` currently works with **express** and **Nest.js** only.
+
+```js
+import { OpenAPM, setOpenAPMLabels } from '@last9/openapm';
+
+const openapm = new OpenAPM({
+  additionalLabels: ['slug']
+});
+
+const handler = () => {
+  setOpenAPMLabels({ slug: 'org-slug' });
+};
+```
+
+5. Defining custom metrics
+
+OpenAPM exposes underlying `prom-client` via `getMetricClient` function.
+
+```js
+const { getMetricClient } = require('@last9/openapm');
+
+// initialize custom metric
+const client = getMetricClient();
+const counter = new client.Counter({
+  name: 'cancelation_calls',
+  help: 'no. of times cancel operation is called'
+});
+
+// handler
+app.get('/cancel/:ids', (req, res) => {
+  counter.inc();
+  res.status(200).json({});
+});
+```
+
+Follow the [documentation of prom-client](https://github.com/siimon/prom-client?tab=readme-ov-file#custom-metrics)
+to get familiar with the DSL for defining custom metrics.
 
 ## Setup locally
 

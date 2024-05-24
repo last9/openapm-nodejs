@@ -18,14 +18,15 @@ const openapm = new OpenAPM({
     }
   },
   levitateConfig: {
-    orgSlug: process.env['LEVITATE_ORG_SLUG'],
-    dataSourceName: process.env['LEVITATE_DATASOURCE'],
+    orgSlug: process.env.LEVITATE_ORG_SLUG,
+    dataSourceName: process.env.LEVITATE_DATASOURCE,
     refreshTokens: {
-      write: process.env['LEVITATE_WRITE_REFRESH_TOKEN']
+      write: process.env.LEVITATE_WRITE_REFRESH_TOKEN
     }
   },
   customPathsToMask: [/\b\d+(?:,\d+)*\b/gm],
-  excludeDefaultLabels: ['host', 'program']
+  excludeDefaultLabels: ['host', 'program'],
+  additionalLabels: ['slug']
 });
 
 openapm.instrument('express');
@@ -60,26 +61,47 @@ app.get('/result', async (req, res) => {
 });
 
 app.get('/organizations/:org/users', (req, res) => {
-  console.log(req.params['org']);
+  console.log(req.params.org);
 
   res.status(200).json({});
 });
 
 app.get('/cancel/:ids', (req, res) => {
+  counter.inc();
   res.status(200).json({});
 });
 
-app.all('/api/v2/product/search/:term', (req, res) => {
+app.post('/api/v2/product/search/:term', (req, res) => {
   res.status(200).json({});
 });
 
 app.all('/api/v1/slug/:slug', (req, res) => {
+  setOpenAPMLabels({ slug: req.params.slug });
   res.status(200).json({});
 });
 
-const server = app.listen(3000, () => {
+server = app.listen(3000, async () => {
   client = new pg.Client('postgresql://tester:password@localhost:5432/testdb'); //  If this throws an error, Change the db url to the one you're running on your machine locally or the testing instance you might have hosted.
 
   await client.connect();
   console.log('serving at 3000');
 });
+
+const gracefullyShutdownServer = async () => {
+  await client.end();
+  server.close(() => {
+    openapm
+      .shutdown()
+      .then(() => {
+        console.log('Server gracefully shutdown');
+        process.exit(0);
+      })
+      .catch((err) => {
+        console.log(err);
+        process.exit(1);
+      });
+  });
+};
+
+process.on('SIGINT', gracefullyShutdownServer);
+process.on('SIGTERM', gracefullyShutdownServer);

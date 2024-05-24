@@ -13,6 +13,7 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
+    "downlevelIteration": true,
     "types": ["node", "mysql2", "@nestjs/core"],
     "outDir": "dist"
   },

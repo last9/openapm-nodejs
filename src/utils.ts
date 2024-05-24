@@ -1,7 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import UrlValueParser from 'url-value-parser';
 
 export const getPackageJson = () => {
   const packageJsonPath = path.join(process.cwd(), 'package.json');
@@ -62,4 +61,8 @@ export const maskValuesInSQLQuery = (query: string) => {
     // If not, return the original match (should not occur with the current regex)
     return match;
   });
+};
+
+export const isCJS = () => {
+  return typeof exports === 'object' && typeof module !== 'undefined';
 };
