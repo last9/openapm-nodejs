@@ -38,6 +38,11 @@ runMysqlTests() {
   npm run vitest -t ./tests/mysql2.test.ts
 }
 
+# Run PG tests
+runPgTests() {
+  npm run vitest -t ./tests/pg.test.ts
+}
+
 # Check if a variable is passed
 if [ "$1" = "express" ]; then
   npm run vitest -t ./tests/express.test.ts 
@@ -53,7 +58,9 @@ elif [ "$1" = "nestjs" ]; then
 elif [ "$1" = "prisma" ]; then
   runPrismaTests
 elif [ "$1" = "mysql2" ]; then
-  runAllTests
+  runMysqlTests
+elif [ "$1" = "pg" ]; then
+  runPgTests
 else
   runAllTests
 fi

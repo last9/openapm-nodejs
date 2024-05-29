@@ -46,7 +46,7 @@ export function isWrapped<
 export function wrap<
   T extends Record<string | number | symbol, any>,
   K extends keyof T
->(nodule: T, name: K, wrapper: (original: T[K]) => T[K]) {
+>(nodule: T, name: K, wrapper: (original: T[K], nodule?: T) => T[K]) {
   // Retrieve the original property from the object using the given key.
   const original = nodule?.[name];
 
@@ -65,7 +65,7 @@ export function wrap<
   }
 
   // Create the wrapped function by invoking the wrapper with the original function.
-  const wrappedFn = wrapper(original);
+  const wrappedFn = wrapper(original, nodule);
 
   // Add a property to the wrapped function to store the original function for later reference.
   defineProperty(wrappedFn, symbols.ORIGINAL, original);

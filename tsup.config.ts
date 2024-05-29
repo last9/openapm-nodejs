@@ -10,7 +10,14 @@ export default defineConfig(async () => ({
   cjsInterop: true,
   treeshake: true,
   shims: true,
-  external: ['mysql2', '@nestjs/core', '@prisma/client', 'express', 'next'],
+  external: [
+    'mysql2',
+    '@nestjs/core',
+    '@prisma/client',
+    'express',
+    'next',
+    'pg'
+  ],
   dts: true,
   clean: true,
   splitting: false,

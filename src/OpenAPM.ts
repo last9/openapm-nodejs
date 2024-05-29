@@ -21,6 +21,7 @@ import { instrumentNestFactory } from './clients/nestjs';
 import { instrumentNextjs } from './clients/nextjs';
 
 import { LevitateConfig, LevitateEvents } from './levitate/events';
+import { instrumentPG } from './clients/pg';
 import {
   getHTTPRequestStore,
   runInHTTPRequestStore
@@ -32,11 +33,7 @@ export type ExtractFromParams = {
   mask: string;
 };
 
-export type DefaultLabels =
-  | 'environment'
-  | 'program'
-  | 'version'
-  | 'host';
+export type DefaultLabels = 'environment' | 'program' | 'version' | 'host';
 
 export interface OpenAPMOptions {
   /**
@@ -83,13 +80,14 @@ export interface OpenAPMOptions {
   levitateConfig?: LevitateConfig;
 }
 
-export type SupportedModules = 'express' | 'mysql' | 'nestjs' | 'nextjs';
+export type SupportedModules = 'express' | 'mysql' | 'nestjs' | 'nextjs' | 'pg';
 
 const moduleNames = {
   express: 'express',
   mysql: 'mysql2',
   nestjs: '@nestjs/core',
-  nextjs: 'next'
+  nextjs: 'next',
+  pg: 'pg'
 };
 
 const packageJson = getPackageJson();
@@ -186,7 +184,7 @@ export class OpenAPM extends LevitateEvents {
       environment: this.environment,
       program: packageJson?.name ?? '',
       version: packageJson?.version ?? '',
-      host: os.hostname(),      
+      host: os.hostname(),
       ...this.defaultLabels
     };
 
@@ -433,6 +431,7 @@ export class OpenAPM extends LevitateEvents {
         const { NestFactory } = require('@nestjs/core');
         instrumentNestFactory(NestFactory, this._REDMiddleware);
       }
+
       if (moduleName === 'nextjs') {
         const nextServer = require(path.resolve(
           'node_modules/next/dist/server/next-server.js'
@@ -451,6 +450,11 @@ export class OpenAPM extends LevitateEvents {
           },
           this
         );
+      }
+
+      if (moduleName === 'pg') {
+        const pg = require('pg');
+        instrumentPG(pg);
       }
 
       return true;
