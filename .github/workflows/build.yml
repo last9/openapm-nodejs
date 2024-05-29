@@ -20,20 +20,18 @@ jobs:
       - uses: harmon758/postgresql-action@v1
         with:
           postgresql version: '14'
-          postgresql user: 'tester'
-          postgresql password: 'password'
 
       - name: Test MySQL Connection
         run: mysql -h localhost -u root -e 'SELECT version()'
 
       - name: Test Postgres Connection
-        run: psql
+        run: psql -h localhost -U root -c 'SELECT version()'
 
       - name: Create test DB
         run: mysql -h localhost -u root -e 'CREATE DATABASE test_db'
 
       - name: Create test DB
-        run: psql -h localhost -U tester -c 'CREATE DATABASE testdb'
+        run: psql -h localhost -U root -c 'CREATE DATABASE testdb'
 
       - name: 🛎 Checkout
         uses: actions/checkout@v3

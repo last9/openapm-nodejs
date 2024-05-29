@@ -3,7 +3,7 @@ import { describe, beforeAll, afterAll, expect, test } from 'vitest';
 import { Client } from 'pg';
 import { OpenAPM, getMetricClient } from '../src/OpenAPM';
 
-let connectionUri = 'postgres://tester:password@localhost:5432/testdb';
+let connectionUri = 'postgres://root:password@localhost:5432/testdb';
 
 describe('pg', () => {
   let client;
