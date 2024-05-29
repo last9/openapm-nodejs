@@ -27,7 +27,7 @@ jobs:
         run: mysql -h localhost -u root -e 'SELECT version()'
 
       - name: Test Postgres Connection
-        run: psql -h localhost -U root -c 'SELECT version()'
+        run: psql -h localhost -p 7432 -U root -c 'SELECT version()'
 
       - name: Create test DB
         run: mysql -h localhost -u root -e 'CREATE DATABASE test_db'
