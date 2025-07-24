@@ -17,9 +17,6 @@
     "Tushar Choudhari <tushar@last9.io> (https://github.com/chtushar)",
     "Aniket Rao <aniket@last9.io> (https://github.com/anik3tra0)"
   ],
-  "peerDependencies": {
-    "express": "4.x"
-  },
   "keywords": [
     "last9",
     "metrics",

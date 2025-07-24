@@ -11,18 +11,16 @@ export const instrumentExpress = (
   redMiddleware: Express.RequestHandler,
   openapm: OpenAPM
 ) => {
-  let redMiddlewareAdded = false;
-
   const routerProto = express.Router as unknown as Express.Router['prototype'];
 
-  wrap(routerProto, 'use', (original) => {
+  wrap(routerProto.use ? routerProto : routerProto.prototype, 'use', (original) => {
     return function wrappedUse(
       this: typeof original,
       ...args: Parameters<typeof original>
     ) {
-      if (!redMiddlewareAdded) {
+      if (!this._redMiddlewareAdded) {
         original.apply(this, [redMiddleware]);
-        redMiddlewareAdded = true;
+        this._redMiddlewareAdded = true;
       }
       return original.apply(this, args);
     };
