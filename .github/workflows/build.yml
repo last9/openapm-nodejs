@@ -10,9 +10,12 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-node@v2
+      - name: 🛎 Checkout
+        uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v4
         with:
-          node-version: 18.19.0
+          node-version-file: .nvmrc
       - uses: shogo82148/actions-setup-mysql@v1.23.0
         with:
           mysql-version: '8.0'
@@ -22,9 +25,6 @@ jobs:
 
       - name: Create test DB
         run: mysql -h localhost -u root -e 'CREATE DATABASE test_db'
-
-      - name: 🛎 Checkout
-        uses: actions/checkout@v3
 
       - name: 🧶 Get NPM cache
         uses: actions/cache@v3
