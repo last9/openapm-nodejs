@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+
+- Require Node.js `^22.23.4 || ^24.22.1 || >=26.12.1` via `engines.node`. Earlier releases trust TLS chains through the compromised eMudhra intermediates ([nodejs/node#66871](https://github.com/nodejs/node/pull/66871)).
+
 ## [0.9.2]
 
 ### Added

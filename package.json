@@ -17,6 +17,9 @@
     "Tushar Choudhari <tushar@last9.io> (https://github.com/chtushar)",
     "Aniket Rao <aniket@last9.io> (https://github.com/anik3tra0)"
   ],
+  "engines": {
+    "node": "^22.23.4 || ^24.22.1 || >=26.12.1"
+  },
   "peerDependencies": {
     "express": "4.x"
   },

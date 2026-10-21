@@ -7,15 +7,24 @@ on:
 
 jobs:
   release:
-    name: Build
+    name: Build (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The patched floor of each line in package.json engines.node (#58);
+        # tests/node-version.test.ts keeps them equal.
+        node-version: ['22.23.4', '24.22.1', '26.12.1']
     steps:
       - name: 🛎 Checkout
         uses: actions/checkout@v3
 
       - uses: actions/setup-node@v4
         with:
-          node-version-file: .nvmrc
+          node-version: ${{ matrix.node-version }}
+
+      - name: 🔐 TLS probe (eMudhra chain must be rejected)
+        run: node scripts/tls-probe.mjs
       - uses: shogo82148/actions-setup-mysql@v1.23.0
         with:
           mysql-version: '8.0'
