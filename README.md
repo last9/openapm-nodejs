@@ -19,6 +19,11 @@ An APM solution based on metrics and open-source tools such as Prometheus and Gr
 npm install --save @last9/openapm@latest
 ```
 
+Requires Node.js `^22.23.4 || ^24.22.1 || >=26.12.1`. Earlier releases trust
+TLS chains through the compromised eMudhra intermediates
+([nodejs/node#66871](https://github.com/nodejs/node/pull/66871)), which affects
+the HTTPS calls OpenAPM makes to Last9.
+
 ## Usage
 
 ```js
@@ -276,6 +281,8 @@ to get familiar with the DSL for defining custom metrics.
 ## Setup locally
 
 Make sure you are in the express directory.
+
+- Use the Node.js version in `.nvmrc` (`nvm use`)
 
 - Install packages
 
