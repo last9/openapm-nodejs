@@ -21,10 +21,10 @@ const openapm = new OpenAPM({
     }
   },
   levitateConfig: {
-    orgSlug: process.env.LEVITATE_ORG_SLUG,
-    dataSourceName: process.env.LEVITATE_DATASOURCE,
+    orgSlug: process.env.LAST9_ORG_SLUG,
+    dataSourceName: process.env.LAST9_DATASOURCE,
     refreshTokens: {
-      write: process.env.LEVITATE_WRITE_REFRESH_TOKEN
+      write: process.env.LAST9_WRITE_REFRESH_TOKEN
     }
   },
   customPathsToMask: [/\b\d+(?:,\d+)*\b/gm],

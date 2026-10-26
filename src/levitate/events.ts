@@ -65,7 +65,7 @@ export class LevitateEvents extends EventEmitter {
   private initiateEventListeners() {
     if (typeof this.levitateConfig?.refreshTokens?.write === 'string') {
       console.log(
-        chalk.green(`\nYou've enabled Events powered by Levitate 🚀`)
+        chalk.green(`\nYou've enabled Events powered by Last9 🚀`)
       );
       console.log(
         'For more info checkout https://docs.last9.io/change-events\n'

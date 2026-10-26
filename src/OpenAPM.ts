@@ -79,7 +79,7 @@ export interface OpenAPMOptions {
   customPathsToMask?: Array<RegExp>;
   /** Skip mentioned labels */
   excludeDefaultLabels?: Array<DefaultLabels>;
-  /** Levitate Config */
+  /** Last9 Config */
   levitateConfig?: LevitateConfig;
 }
 

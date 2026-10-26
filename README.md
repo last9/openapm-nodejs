@@ -162,7 +162,7 @@ const openapm = new OpenAPM({
 }
 ```
 
-9. `levitateConfig`: (Optional) Configuration for Levitate TSDB. Adding this configuration will enable the [Change Events](https://docs.last9.io/docs/change-events).
+9. `levitateConfig`: (Optional) Configuration for Last9 Change Events. Adding this configuration will enable the [Change Events](https://docs.last9.io/docs/change-events).
 
 10. `enableMetricsServer`: (Optional) Defaults to `true`. When set to `false` the OpenAPM won't start a metrics server. To get the metrics users can rely on the `.getMetrics()` function.
 
